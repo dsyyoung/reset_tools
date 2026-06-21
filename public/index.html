@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RESET Data Viewer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>RESET Data Viewer</h1>
+    <p class="intro">Please enter a record ID and choose the information you want to see.</p>
+    <div class="controls">
+      <div class="control-row">
+        <label for="res-id">Record ID</label>
+        <input id="res-id" name="res-id" type="text" placeholder="Enter record ID" />
+      </div>
+      <div class="control-row">
+        <label for="target-field">Choose information</label>
+        <select id="target-field" name="target-field">
+          <option value="drug_info">Drug Information</option>
+          <option value="medical_history">Medical History</option>
+        </select>
+      </div>
+      <button id="load-button" type="button">Load Data</button>
+    </div>
+    <section id="status" class="status"></section>
+    <section id="results" class="results"></section>
+  </main>
+  <script src="app.js" defer></script>
+</body>
+</html>
