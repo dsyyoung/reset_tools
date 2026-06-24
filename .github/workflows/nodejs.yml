@@ -30,7 +30,7 @@ jobs:
       - name: Create Deployment Zip
         if: github.event_name == 'push'
         run: |
-          zip -r deploy.zip server.js package.json node_modules
+          zip -r deploy.zip server.js package.json node_modules mongodb-ca.pem
 
       - name: Configure AWS Credentials
         if: github.event_name == 'push'
