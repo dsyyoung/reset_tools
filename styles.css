@@ -86,23 +86,8 @@ button:hover {
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
-..status.error {
+.status.error {
   color: #b91c1c;
-}
-
-.status.hidden,
-.results.hidden {
-  display: none;
-}
-
-.value-list {
-  list-style: none;
-  padding-left: 0;
-  margin: 0;
-}
-
-.value-list li {
-  padding: 0.2rem 0;
 }
 
 .data-table {
@@ -146,16 +131,4 @@ button:hover {
   button {
     padding: 1rem;
   }
-}
-
-.value-pair {
-  margin-bottom: 0.5rem;
-}
-
-.value-label {
-  font-weight: 700;
-}
-
-.value-separator {
-  height: 0.5rem;
 }
