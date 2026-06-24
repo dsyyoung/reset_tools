@@ -2,44 +2,6 @@
 
 A small Node.js app that serves a static frontend and queries MongoDB for `res_id` records. The frontend lets users select a target field and load data from the database.
 
-## Files
-
-- `server.js` - Express backend and MongoDB query endpoint
-- `public/index.html` - Static page with the form and results area
-- `public/app.js` - Frontend JavaScript for fetching and rendering data
-- `public/styles.css` - Mobile-friendly and senior-friendly styling
-- `.env` - Environment variables for MongoDB connection
-- `.github/workflows/nodejs.yml` - GitHub Actions CI workflow
-
-## Setup
-
-1. Install dependencies:
-
-```bash
-npm install
-```
-
-2. Create or update `.env` with your MongoDB settings:
-
-```env
-MONGO_URI="mongodb://mongoadmin:password@host:27017"
-MONGO_DB=your_database_name
-MONGO_COLL=your_collection_name
-CA_PATH=/path/to/mongodb-ca.pem
-```
-
-3. Start the server:
-
-```bash
-npm start
-```
-
-4. Open the app in a browser:
-
-```text
-http://localhost:3000
-```
-
 ## Usage
 
 1. Enter a `res_id` value.
@@ -50,8 +12,6 @@ http://localhost:3000
 ## Notes
 
 - The frontend normalizes `res_id` to uppercase, so `res0001` and `RES0001` both work.
-- The app filters `drug_info` results and skips `drug: Yes` when rendering details.
-- The status and results boxes are hidden until the user clicks `Load Data`.
 
 ## GitHub Actions CI
 
@@ -62,17 +22,40 @@ The repo includes `.github/workflows/nodejs.yml`, which:
 - runs `npm test`
 - validates that `server.js` starts and responds on `http://127.0.0.1:3000`
 
-## Deployment
+## AWS Lambda deployment
 
-This app requires a Node.js backend, so it cannot be deployed on GitHub Pages.
+This app can use AWS Lambda as the backend and GitHub Pages for the static frontend.
 
-Recommended deployment targets:
+### Backend
 
-- Railway
-- Render
-- Fly.io
-- Heroku
-- Azure Web Apps
-- AWS Elastic Beanstalk / ECS
+1. Create a Lambda function in AWS.
+2. Deploy the application code and dependencies.
+3. Set environment variables in Lambda:
 
-If you want, I can also add a deployment workflow for one of these platforms.
+```text
+MONGO_URI
+MONGO_DB
+MONGO_COLL
+CA_PATH (optional)
+```
+
+4. Enable a Lambda Function URL.
+5. Allow CORS from your GitHub Pages origin.
+
+### Frontend
+
+Update `public/app.js` and replace the placeholder:
+
+```js
+const apiBaseUrl = 'https://YOUR_LAMBDA_FUNCTION_URL.on.aws';
+```
+
+When your site is hosted on GitHub Pages, the frontend will use that external URL.
+
+### GitHub Pages
+
+GitHub Pages can host the static frontend, but not the backend. Copy `public/index.html`, `public/app.js`, and `public/styles.css` into the Pages source (`docs/` or root) or configure Pages to serve from a branch.
+
+### Run locally
+
+For local development, the app still works with `npm start` and uses the local backend at `/api/data`.

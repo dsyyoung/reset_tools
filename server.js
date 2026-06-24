@@ -1,13 +1,11 @@
 const express = require('express');
+const cors = require('cors');
+const serverless = require('serverless-http');
 const { MongoClient } = require('mongodb');
-const dotenv = require('dotenv');
 const fs = require('fs');
 const path = require('path');
 
-dotenv.config();
-
 const app = express();
-const port = process.env.PORT || 3000;
 const mongoUri = process.env.MONGO_URI;
 const mongoDb = process.env.MONGO_DB || 'test';
 const mongoCollection = process.env.MONGO_COLL || 'items';
@@ -20,12 +18,14 @@ if (!mongoUri) {
 
 const clientOptions = {
   directConnection: true,
+  serverSelectionTimeoutMS: 5000,
+  connectTimeoutMS: 10000,
 };
 
 if (caPath) {
   const resolved = path.resolve(caPath);
   if (!fs.existsSync(resolved)) {
-    console.warn(`CA_PATH file not found: ${resolved}`);
+    console.warn(`CA_PATH file not found: ${resolved}. Lambda looks in /var/task/ by default.`);
   } else {
     clientOptions.tlsCAFile = resolved;
     clientOptions.tls = true;
@@ -34,20 +34,36 @@ if (caPath) {
 
 const client = new MongoClient(mongoUri, clientOptions);
 let db;
+let connecting = null;
 
 async function connectMongo() {
-  await client.connect();
-  db = client.db(mongoDb);
-  console.log(`Connected to MongoDB database: ${mongoDb}`);
-}
+  if (db) return db;
 
-connectMongo().catch((err) => {
-  console.error('MongoDB connection failed:', err);
-  process.exit(1);
+  if (!connecting) {
+    connecting = client.connect().then(() => {
+      db = client.db(mongoDb);
+      console.log(`Connected to MongoDB database: ${mongoDb}`);
+      return db;
+    });
+  }
+  return connecting;
+}
+app.use(cors({
+  origin: '*',
+}));
+
+// Middleware to ensure DB connection
+app.use(async (req, res, next) => {
+  try {
+    await connectMongo();
+    next();
+  } catch (err) {
+    console.error('MongoDB connection failed:', err);
+    res.status(500).json({ error: 'MongoDB connection failed.' });
+  }
 });
 
-app.use(express.static(path.join(process.cwd(), 'public')));
-
+// Primary Data Route
 app.get('/api/data', async (req, res) => {
   const allowedFields = ['drug_info', 'medical_history'];
   const targetField = req.query.field;
@@ -82,6 +98,14 @@ app.get('/api/data', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server listening on http://localhost:${port}`);
-});
+// Local execution fallback
+if (require.main === module) {
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => {
+    console.log(`Server listening on http://localhost:${port}`);
+  });
+}
+
+// Export for AWS Lambda Function URL
+module.exports = app;
+module.exports.handler = serverless(app);

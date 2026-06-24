@@ -6,14 +6,21 @@ const loadButton = document.getElementById('load-button');
 
 const allowedFields = ['drug_info', 'medical_history'];
 
-statusEl.classList.add('hidden');
-resultsEl.classList.add('hidden');
+// Uses the ENV object loaded from config.js
+function getApiUrl() {
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    return ENV.LOCAL_URL;
+  }
+  return ENV.LAMBDA_URL;
+}
 
 async function fetchData(resId, field) {
   const queryString = `?res_id=${encodeURIComponent(resId)}&field=${encodeURIComponent(field)}`;
 
   try {
-    const response = await fetch(`/api/data${queryString}`);
+    const apiUrl = getApiUrl();
+    const response = await fetch(`${apiUrl}/api/data${queryString}`);
+    
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
       const message = payload?.error || `Server returned ${response.status}`;
@@ -48,7 +55,7 @@ function renderData(payload) {
   table.className = 'data-table';
 
   const header = document.createElement('tr');
-  header.innerHTML = '<th>res_id</th><th>' + meta.field + '</th>';
+  header.innerHTML = `<th>res_id</th><th>${meta.field}</th>`;
   table.appendChild(header);
 
   data.forEach((item) => {
@@ -62,9 +69,7 @@ function renderData(payload) {
     function appendObjectEntries(obj) {
       const fragment = document.createDocumentFragment();
       Object.entries(obj).forEach(([key, nestedValue]) => {
-        if (key === 'drug' && nestedValue === 'Yes') {
-          return;
-        }
+        if (key === 'drug' && nestedValue === 'Yes') return;
 
         const rowItem = document.createElement('div');
         rowItem.className = 'value-pair';
@@ -87,9 +92,7 @@ function renderData(payload) {
       value.forEach((entry, index) => {
         if (entry && typeof entry === 'object') {
           Object.entries(entry).forEach(([key, nestedValue]) => {
-            if (key === 'drug' && nestedValue === 'Yes') {
-              return;
-            }
+            if (key === 'drug' && nestedValue === 'Yes') return;
             const entryLine = document.createElement('div');
             entryLine.textContent = `${key}: ${nestedValue == null ? '' : String(nestedValue)}`;
             fragment.appendChild(entryLine);
