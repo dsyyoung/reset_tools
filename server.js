@@ -48,9 +48,9 @@ async function connectMongo() {
   }
   return connecting;
 }
-app.use(cors({
-  origin: '*',
-}));
+// app.use(cors({
+//   origin: '*',
+// }));
 
 // Middleware to ensure DB connection
 app.use(async (req, res, next) => {
