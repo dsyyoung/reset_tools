@@ -44,5 +44,5 @@ jobs:
         if: github.event_name == 'push'
         run: |
           aws lambda update-function-code \
-            --function-name your-lambda-function-name \
+            --function-name participant-info-query \
             --zip-file fileb://deploy.zip
