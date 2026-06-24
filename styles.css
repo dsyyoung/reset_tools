@@ -77,6 +77,25 @@ button:hover {
   background: #1d4ed8;
 }
 
+#results {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.data-table td {
+  border: 1px solid #ccc; 
+  padding: 8px; 
+  text-align: left;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 400px;
+}
+
+input, select {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
 .status,
 .results {
   margin-top: 1rem;
