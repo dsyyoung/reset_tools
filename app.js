@@ -89,24 +89,49 @@ function renderData(payload) {
       valueCell.textContent = value;
     } else if (Array.isArray(value)) {
       const fragment = document.createDocumentFragment();
+      
       value.forEach((entry, index) => {
         if (entry && typeof entry === 'object') {
+          // Create a "Card" for each drug/item
+          const itemBox = document.createElement('div');
+          itemBox.className = 'nested-item';
+
           Object.entries(entry).forEach(([key, nestedValue]) => {
+            // Skip the redundant 'drug: Yes' flag and any empty/null values
             if (key === 'drug' && nestedValue === 'Yes') return;
-            const entryLine = document.createElement('div');
-            entryLine.textContent = `${key}: ${nestedValue == null ? '' : String(nestedValue)}`;
-            fragment.appendChild(entryLine);
+            if (nestedValue == null || nestedValue === '') return; 
+
+            const rowItem = document.createElement('div');
+            rowItem.className = 'value-pair';
+            
+            // Format the key (e.g., 'drug_name' -> 'Drug Name')
+            const formattedKey = key.split('_')
+                                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                    .join(' ');
+
+            const label = document.createElement('span');
+            label.className = 'value-label';
+            label.textContent = `${formattedKey}: `;
+            
+            const content = document.createElement('span');
+            content.textContent = String(nestedValue);
+            
+            // Highlight the drug name specifically to make it act like a header
+            if (key === 'drug_name') {
+              content.className = 'primary-value';
+            }
+
+            rowItem.appendChild(label);
+            rowItem.appendChild(content);
+            itemBox.appendChild(rowItem);
           });
+          
+          fragment.appendChild(itemBox);
         } else {
+          // Fallback for simple arrays of strings/numbers
           const entryLine = document.createElement('div');
           entryLine.textContent = String(entry);
           fragment.appendChild(entryLine);
-        }
-
-        if (index < value.length - 1) {
-          const separator = document.createElement('div');
-          separator.className = 'value-separator';
-          fragment.appendChild(separator);
         }
       });
       valueCell.appendChild(fragment);

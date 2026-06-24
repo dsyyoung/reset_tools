@@ -132,3 +132,23 @@ button:hover {
     padding: 1rem;
   }
 }
+
+.nested-item {
+  background-color: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.nested-item:last-child {
+  margin-bottom: 0;
+}
+.primary-value {
+  font-weight: bold;
+  color: #0366d6;
+  font-size: 1.1em;
+}
+.value-label {
+  font-weight: bold;
+  color: #555;
+}
