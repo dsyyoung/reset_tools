@@ -44,28 +44,6 @@ label {
   font-size: 1rem;
 }
 
-/* 1. Prevent the results box from stretching the page */
-#results {
-  overflow-x: auto; /* Adds a horizontal scrollbar only if needed */
-  max-width: 100%;
-}
-
-/* 2. Force long, unbroken text in the table to wrap to the next line */
-.data-table td {
-  border: 1px solid #ccc; 
-  padding: 8px; 
-  text-align: left;
-  word-wrap: break-word;
-  word-break: break-word;
-  max-width: 400px; /* Prevents a single column from taking over the screen */
-}
-
-/* 3. Ensure your input boxes don't overflow on small mobile screens */
-input, select {
-  box-sizing: border-box;
-  max-width: 100%;
-}
-
 input,
 select {
   width: 100%;
