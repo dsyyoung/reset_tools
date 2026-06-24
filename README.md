@@ -1,61 +1,40 @@
-# RESET Tools
+# Medical Data Lookup App
 
-A small Node.js app that serves a static frontend and queries MongoDB for `res_id` records. The frontend lets users select a target field and load data from the database.
+A lightweight, serverless web application that allows users to securely query specific medical records and drug information from a cloud database. 
 
-## Usage
+This project uses a fully serverless architecture, combining a static frontend with a scalable cloud backend to ensure fast, cost-effective performance.
 
-1. Enter a `res_id` value.
-2. Select either `Drug Information` or `Medical History`.
-3. Click `Load Data`.
-4. The app will query MongoDB and show the matching result.
+## Live Website
+**Access the application here:** [https://daisyoung.com/reset_tools](https://dsyyoung.github.io/reset_tools/)
 
-## Notes
+---
 
-- The frontend normalizes `res_id` to uppercase, so `res0001` and `RES0001` both work.
+## User Guide: How to Use the Web Page
 
-## GitHub Actions CI
+The interface is designed to be simple and intuitive. To look up information:
 
-The repo includes `.github/workflows/nodejs.yml`, which:
+1. **Enter a Resource ID:** In the `RESET ID` input box, type the unique identifier for the record you want to query (e.g., `RES9999`). The system will automatically format it.
+2. **Select a Data Field:** Use the dropdown menu to select the type of information you are looking for:
+   * **Drug Info:** Displays medication records associated with the ID.
+   * **Medical History:** Displays historical health records.
+3. **Load Data:** Click the **Load Data** button. 
+4. **View Results:** The application will fetch the data from the secure backend and display it in an easy-to-read, formatted table. If no records are found, or if an invalid ID is entered, a helpful status message will appear.
 
-- checks out the repository
-- installs dependencies
-- runs `npm test`
-- validates that `server.js` starts and responds on `http://127.0.0.1:3000`
+---
 
-## AWS Lambda deployment
+## Architecture Overview
 
-This app can use AWS Lambda as the backend and GitHub Pages for the static frontend.
+This application is built using a modern decoupled architecture:
 
-### Backend
+* **Frontend:** Vanilla HTML, CSS, and JavaScript.
+* **Hosting:** GitHub Pages (Static hosting with custom DNS routing).
+* **Backend:** Node.js (Express) wrapped in `serverless-http`.
+* **Compute:** AWS Lambda (Triggered via Function URLs).
+* **Database:** MongoDB (Connected securely with TLS).
 
-1. Create a Lambda function in AWS.
-2. Deploy the application code and dependencies.
-3. Set environment variables in Lambda:
-
-```text
-MONGO_URI
-MONGO_DB
-MONGO_COLL
-CA_PATH (optional)
-```
-
-4. Enable a Lambda Function URL.
-5. Allow CORS from your GitHub Pages origin.
-
-### Frontend
-
-Update `public/app.js` and replace the placeholder:
-
-```js
-const apiBaseUrl = 'https://YOUR_LAMBDA_FUNCTION_URL.on.aws';
-```
-
-When your site is hosted on GitHub Pages, the frontend will use that external URL.
-
-### GitHub Pages
-
-GitHub Pages can host the static frontend, but not the backend. Copy `public/index.html`, `public/app.js`, and `public/styles.css` into the Pages source (`docs/` or root) or configure Pages to serve from a branch.
-
-### Run locally
-
-For local development, the app still works with `npm start` and uses the local backend at `/api/data`.
+### The Data Flow
+1. The user's browser loads the static UI from GitHub Pages.
+2. The `app.js` script reads the backend API destination from `config.js`.
+3. The browser sends a `fetch` request with query parameters (`?res_id=...&field=...`) to the AWS Lambda Function URL.
+4. AWS Lambda spins up the Express server, connects to MongoDB (using cached connections for speed), retrieves the specific projection, and returns JSON.
+5. The frontend parses the JSON and dynamically generates the HTML table.
