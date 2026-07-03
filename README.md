@@ -5,8 +5,8 @@ A lightweight, serverless suite of web tools that allows users to securely query
 This project uses a serverless architecture, combining a static frontend with a scalable cloud backend to ensure fast, cost-effective performance.
 
 ## Live Website
-* **Data Viewer:** [https://reset_tools/medical_query](https://dsyyoung.github.io/reset_tools/)
-* **Authorization Tool:** [https://reset_tools/garmin_auth](https://dsyyoung.github.io/reset_tools/auth.html)
+* **Data Viewer:** [https://dsyyoung.github.io/reset_tools/index.html](https://dsyyoung.github.io/reset_tools/)
+* **Authorization Tool:** [https://dsyyoung.github.io/reset_tools/auth.html](https://dsyyoung.github.io/reset_tools/auth.html)
 
 ---
 
