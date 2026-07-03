@@ -1,45 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RESET ID Authorization Tool</title>
+  <title>Garmin Authorization Status</title>
   <!-- Google Fonts for premium typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="auth.css" />
 </head>
+
 <body>
   <div class="background-beams"></div>
-  
+
   <main class="container">
     <header class="app-header">
       <a href="index.html" class="nav-back-link">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-back"><path d="m15 18-6-6 6-6"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" class="icon-back">
+          <path d="m15 18-6-6 6-6" />
+        </svg>
         Back to Data Viewer
       </a>
       <div class="badge">Security Module</div>
-      <h1 class="main-title">RESET ID Authorization</h1>
-      <p class="intro">Lookup and verify client identities using their unique RESET ID</p>
+      <h1 class="main-title">Garmin Authorization Status</h1>
+      <p class="intro">Lookup and verify using your unique RESET ID</p>
     </header>
 
     <section class="glass-card main-card">
       <div class="form-group">
         <label for="res-id" class="input-label">RESET ID</label>
         <div class="input-wrapper">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input 
-            id="res-id" 
-            name="res-id" 
-            type="text" 
-            placeholder="e.g., RES5216" 
-            autocomplete="off"
-            spellcheck="false"
-          />
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="search-icon">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input id="res-id" name="res-id" type="text" placeholder="e.g., RES5216" autocomplete="off"
+            spellcheck="false" />
         </div>
       </div>
-      
+
       <button id="authorize-button" type="button" class="btn-authorize">
         <span class="btn-text">Check Authorization</span>
         <div class="spinner hidden" id="btn-spinner"></div>
@@ -51,7 +56,9 @@
       <!-- Loading State -->
       <div id="status-loading" class="status-box loading-box hidden">
         <div class="wave-spinner">
-          <div></div><div></div><div></div>
+          <div></div>
+          <div></div>
+          <div></div>
         </div>
         <span>Querying secure ledger database...</span>
       </div>
@@ -60,14 +67,18 @@
       <div id="status-success" class="status-box success-box hidden">
         <div class="status-header">
           <div class="icon-circle success-circle">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="status-icon"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m22 4-10 10.01-3-3"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="status-icon">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <path d="m22 4-10 10.01-3-3" />
+            </svg>
           </div>
           <div class="status-title-group">
             <h3>Authorization Successful</h3>
             <p>Verification record resolved successfully.</p>
           </div>
         </div>
-        
+
         <div class="details-card">
           <div class="details-row">
             <span class="detail-label">Associated User ID</span>
@@ -75,11 +86,15 @@
               <code id="display-user-id" class="user-id-text">7940c963-0b82-41e5-a5e5-c70224e38206</code>
               <button id="copy-button" class="copy-btn" title="Copy User ID">
                 <span class="copy-btn-text">Copy</span>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-copy">
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                </svg>
               </button>
             </div>
           </div>
-          
+
           <div class="details-grid">
             <div class="grid-item">
               <span class="detail-label">RESET ID</span>
@@ -101,7 +116,12 @@
       <div id="status-error" class="status-box error-box hidden">
         <div class="status-header">
           <div class="icon-circle error-circle">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="status-icon"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="status-icon">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" x2="12" y1="8" y2="12" />
+              <line x1="12" x2="12.01" y1="16" y2="16" />
+            </svg>
           </div>
           <div class="status-title-group">
             <h3>Authorization Failed</h3>
@@ -115,4 +135,5 @@
   <script src="config.js"></script>
   <script src="auth.js" defer></script>
 </body>
+
 </html>
