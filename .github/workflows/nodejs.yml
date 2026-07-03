@@ -27,6 +27,11 @@ jobs:
       - name: Run syntax check
         run: npm test
       
+      - name: Create PEM file from secret
+        if: github.event_name == 'push'
+        run: |
+          echo "${{ secrets.MONGODB_CA_PEM }}" > mongodb-ca.pem
+
       - name: Create Deployment Zip
         if: github.event_name == 'push'
         run: |
