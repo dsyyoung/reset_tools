@@ -18,14 +18,10 @@ const copyButton = document.getElementById('copy-button');
 
 // Resolve the correct API base URL using ENV loaded from config.js
 function getApiUrl() {
-  if (window.ENV) {
-    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-      return ENV.LOCAL_URL;
-    }
-    return ENV.LAMBDA_URL;
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    return ENV.LOCAL_URL;
   }
-  // Fallback default
-  return '';
+  return ENV.LAMBDA_URL;
 }
 
 // Fetch identity record and update the UI accordingly
