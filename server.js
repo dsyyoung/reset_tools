@@ -98,6 +98,38 @@ app.get('/api/data', async (req, res) => {
   }
 });
 
+// Authorization Route
+app.get('/api/authorize', async (req, res) => {
+  const resId = req.query.res_id;
+
+  if (!resId) {
+    return res.status(400).json({ error: 'Missing required query parameter: res_id.' });
+  }
+
+  const sanitizedResId = resId.trim().toUpperCase();
+
+  try {
+    const crfDb = client.db('CRF_data');
+    const collection = crfDb.collection('Wearables');
+    const doc = await collection.findOne({ res_id: sanitizedResId });
+
+    if (!doc) {
+      return res.status(404).json({ error: `RESET ID "${sanitizedResId}" not found.` });
+    }
+
+    res.json({
+      success: true,
+      user_id: doc.user_id,
+      res_id: doc.res_id,
+      type: doc.type,
+      serialNumber: doc.serialNumber,
+    });
+  } catch (error) {
+    console.error('Failed to query Wearables MongoDB:', error);
+    res.status(500).json({ error: 'Unable to query Wearables database.' });
+  }
+});
+
 // Local execution fallback
 if (require.main === module) {
   const port = process.env.PORT || 3000;
