@@ -24,12 +24,24 @@ const clientOptions = {
 
 if (caPath) {
   const resolved = path.resolve(caPath);
-  if (!fs.existsSync(resolved)) {
+  console.log(`[Diagnostic] CA Path resolved to: ${resolved}`);
+  const exists = fs.existsSync(resolved);
+  console.log(`[Diagnostic] CA Path exists: ${exists}`);
+  if (!exists) {
     console.warn(`CA_PATH file not found: ${resolved}. Lambda looks in /var/task/ by default.`);
   } else {
+    try {
+      const stats = fs.statSync(resolved);
+      const contentSample = fs.readFileSync(resolved, 'utf8').substring(0, 30);
+      console.log(`[Diagnostic] CA Path size: ${stats.size} bytes. Content sample: "${contentSample.replace(/\n/g, '\\n')}"`);
+    } catch (e) {
+      console.error(`[Diagnostic] Error reading CA file: ${e.message}`);
+    }
     clientOptions.tlsCAFile = resolved;
     clientOptions.tls = true;
   }
+} else {
+  console.log('[Diagnostic] caPath is not defined.');
 }
 
 const client = new MongoClient(mongoUri, clientOptions);
