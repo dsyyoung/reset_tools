@@ -9,7 +9,7 @@ const app = express();
 const mongoUri = process.env.MONGO_URI;
 const mongoDb = process.env.MONGO_DB || 'test';
 const mongoCollection = process.env.MONGO_COLL || 'items';
-const caPath = process.env.CA_PATH;
+const caPath = process.env.CA_PATH || path.join(__dirname, 'mongodb-ca.pem');
 
 if (!mongoUri) {
   console.error('Missing MONGO_URI in environment.');

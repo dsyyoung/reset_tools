@@ -29,8 +29,10 @@ jobs:
       
       - name: Create PEM file from secret
         if: github.event_name == 'push'
+        env:
+          MONGODB_CA_PEM: ${{ secrets.MONGODB_CA_PEM }}
         run: |
-          echo "${{ secrets.MONGODB_CA_PEM }}" > mongodb-ca.pem
+          echo "$MONGODB_CA_PEM" > mongodb-ca.pem
 
       - name: Create Deployment Zip
         if: github.event_name == 'push'
