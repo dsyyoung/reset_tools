@@ -7,6 +7,7 @@ This project uses a serverless architecture, combining a static frontend with a 
 ## Live Website
 * **Data Viewer:** [https://dsyyoung.github.io/reset_tools/index.html](https://dsyyoung.github.io/reset_tools/)
 * **Authorization Tool:** [https://dsyyoung.github.io/reset_tools/auth.html](https://dsyyoung.github.io/reset_tools/auth.html)
+* **Latest Entry Finder:** [https://dsyyoung.github.io/reset_tools/latest.html](https://dsyyoung.github.io/reset_tools/latest.html)
 
 ---
 
@@ -28,6 +29,17 @@ A security verification portal to retrieve user identities:
    * **If Authorized**: The tool displays an "Authorization Successful" banner, shows the associated `user_id` (e.g. `7940c963-0b82-41e5-a5e5-c70224e38206`), and displays device details (device type, serial number). You can copy the User ID to your clipboard with the **Copy** button.
    * **If Unauthorized**: A red failure alert is shown indicating that the RESET ID was not found.
 
+### 3. Garmin Latest Entry Finder (`latest.html`)
+A tool to resolve the latest Garmin watch data upload timestamp and file path from the S3 data lakehouse:
+1. **Navigate to the Page**: Click on the "Latest Entry" link in the top navigation bar.
+2. **Enter a RESET ID**: Type the client's RESET ID (e.g., `RES5216`) in the input box.
+3. **Find Latest Entry**: Click **Find Latest Entry** or press **Enter**.
+4. **View Resolved Details**:
+   * **Latest Entry Date**: Displays the most recent date parsed from the folder path (e.g., `July 14, 2026`).
+   * **Associated User ID**: The resolved MongoDB mapping for the RESET ID (with a **Copy** button).
+   * **Latest Document S3 Key**: The exact S3 object key of the latest file (with a **Copy** button).
+   * **S3 Last Modified**: The precise last modified timestamp of the file in S3.
+
 ---
 
 ## Architecture & API Overview
@@ -38,7 +50,7 @@ This application is built using a modern decoupled architecture:
 * **Hosting:** GitHub Pages.
 * **Backend:** Node.js (Express) wrapped in `serverless-http`.
 * **Compute:** AWS Lambda.
-* **Database:** MongoDB (Connected securely with TLS).
+* **Database:** MongoDB (Connected securely with TLS) and AWS S3 (Garmin Watch Data Lakehouse).
 
 ### API Endpoints
 
@@ -52,9 +64,14 @@ This application is built using a modern decoupled architecture:
 * **Database Target**: `CRF_data` database, `Wearables` collection.
 * **Behavior**: Locates the wearable registration for the RESET ID and returns the corresponding `user_id` along with wearable type and serial number.
 
+#### 3. `GET /api/latest-date`
+* **Query Params**: `res_id` (string)
+* **Database/Storage Target**: `CRF_data` database, `Wearables` collection $\rightarrow$ AWS S3 `garmin-watch-data-lakehouse` bucket.
+* **Behavior**: Resolves the `user_id` for the RESET ID from MongoDB, and crawls the user's folders in S3 to retrieve the latest file key, date, and upload timestamp.
+
 ### The Data Flow
 1. The user loads the static UI from GitHub Pages.
 2. The frontend scripts read the backend API destination from `config.js`.
-3. Browser makes HTTP requests to the AWS Lambda Function URL (`/api/data` or `/api/authorize`).
-4. AWS Lambda connects to the MongoDB server, runs the query on the respective database, and returns JSON.
-5. The frontend handles success and failure states, rendering them with clean typography and transition animations.
+3. Browser makes HTTP requests to the AWS Lambda Function URL (`/api/data`, `/api/authorize`, or `/api/latest-date`).
+4. AWS Lambda connects to MongoDB (and queries AWS S3 if requested), runs the query/traversal, and returns JSON.
+5. The frontend handles success and failure states, rendering them with clean typography, clipboard interactions, and transitions.
