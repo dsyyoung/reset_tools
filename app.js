@@ -8,7 +8,7 @@ const allowedFields = ['drug_info', 'medical_history'];
 
 // Uses the ENV object loaded from config.js
 function getApiUrl() {
-  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:') {
     return ENV.LOCAL_URL;
   }
   return ENV.LAMBDA_URL;

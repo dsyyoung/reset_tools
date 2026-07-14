@@ -21,7 +21,7 @@ const copyKeyButton = document.getElementById('copy-key-button');
 
 // Resolve API Base URL from config
 function getApiUrl() {
-  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:') {
     return ENV.LOCAL_URL;
   }
   return ENV.LAMBDA_URL;
