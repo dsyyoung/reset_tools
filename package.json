@@ -8,6 +8,7 @@
     "test": "node --check server.js public/app.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1086.0",
     "cors": "^2.8.6",
     "dotenv": "^16.3.1",
     "express": "^4.22.2",
