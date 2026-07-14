@@ -63,9 +63,11 @@ async function connectMongo() {
   }
   return connecting;
 }
-app.use(cors({
-  origin: '*',
-}));
+if (!process.env.LAMBDA_TASK_ROOT) {
+  app.use(cors({
+    origin: '*',
+  }));
+}
 
 // Middleware to ensure DB connection
 app.use(async (req, res, next) => {
