@@ -148,6 +148,11 @@ function renderData(payload) {
 
   resultsEl.innerHTML = '';
   resultsEl.appendChild(table);
+
+  const correctionBanner = document.createElement('p');
+  correctionBanner.className = 'correction-notice';
+  correctionBanner.innerHTML = `Found an error in the data? <a href="https://nus.syd1.qualtrics.com/jfe/form/SV_3DXkphuzE4AUHXM" target="_blank" rel="noopener noreferrer" class="correction-link">Submit a Data Correction</a>`;
+  resultsEl.appendChild(correctionBanner);
 }
 
 loadButton.addEventListener('click', () => {
