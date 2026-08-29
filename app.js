@@ -96,14 +96,53 @@ function renderData(payload) {
           const itemBox = document.createElement('div');
           itemBox.className = 'nested-item';
 
+          // Pre-compute values needed for conditional logic
+          const isOngoing = String(entry['drug_ongoing'] ?? entry['ongoing'] ?? '').toLowerCase() === 'yes';
+          const indication = entry['indication'];
+          const otherIndication = entry['other_indication'];
+
           Object.entries(entry).forEach(([key, nestedValue]) => {
-            // Skip the redundant 'drug: Yes' flag and any empty/null values
+            // Skip redundant 'drug: Yes' flag and empty/null values
             if (key === 'drug' && nestedValue === 'Yes') return;
-            if (nestedValue == null || nestedValue === '') return; 
+            if (nestedValue == null || nestedValue === '') return;
+
+            // Do not display source
+            if (key === 'source') return;
+
+            // Do not display other_indication as its own row (merged into indication)
+            if (key === 'other_indication') return;
+
+            // Hide stop date when drug is ongoing
+            if ((key === 'drug_stop_date' || key === 'stop_date') && isOngoing) return;
+
+            let displayValue = String(nestedValue);
+
+            // Start date: show date portion only (strip time)
+            if (key === 'drug_start_date' || key === 'start_date') {
+              displayValue = displayValue.split('T')[0].split(' ')[0];
+            }
+
+            // Stop date: show date portion only (strip time)
+            if (key === 'drug_stop_date' || key === 'stop_date') {
+              displayValue = displayValue.split('T')[0].split(' ')[0];
+            }
+
+            // Indication: strip leading serial numbers (e.g. "1. ", "2) ")
+            // and if "None of the above", show other_indication instead
+            if (key === 'indication') {
+              const cleaned = displayValue.replace(/^\d+[\.\)]\s*/, '').trim();
+              if (/none of the above/i.test(cleaned)) {
+                displayValue = (otherIndication != null && otherIndication !== '')
+                  ? String(otherIndication)
+                  : cleaned;
+              } else {
+                displayValue = cleaned;
+              }
+            }
 
             const rowItem = document.createElement('div');
             rowItem.className = 'value-pair';
-            
+
             // Format the key (e.g., 'drug_name' -> 'Drug Name')
             const formattedKey = key.split('_')
                                     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -112,11 +151,11 @@ function renderData(payload) {
             const label = document.createElement('span');
             label.className = 'value-label';
             label.textContent = `${formattedKey}: `;
-            
+
             const content = document.createElement('span');
-            content.textContent = String(nestedValue);
-            
-            // Highlight the drug name specifically to make it act like a header
+            content.textContent = displayValue;
+
+            // Highlight the drug name to act as a card header
             if (key === 'drug_name') {
               content.className = 'primary-value';
             }
