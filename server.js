@@ -64,6 +64,10 @@ async function connectMongo() {
       db = client.db(mongoDb);
       console.log(`Connected to MongoDB database: ${mongoDb}`);
       return db;
+    }).catch(error => {
+      // Allow a later request to retry after a transient connection failure.
+      connecting = null;
+      throw error;
     });
   }
   return connecting;

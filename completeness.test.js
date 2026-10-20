@@ -219,3 +219,21 @@ test('missing PDF with unavailable database remains unknown', async () => {
     { bucket: actualConfig.bucket, sources: { '1c.vascular': actualConfig.sources['1c.vascular'] } }, 'RES0001');
   assert.equal(result.visits[2].reports[1].status, 'unknown');
 });
+test('MongoDB connection retries after a failure and reuses a successful connection', async () => {
+  const fs = require('node:fs');
+  const vm = require('node:vm');
+  const source = fs.readFileSync('server.js', 'utf8');
+  const start = source.indexOf('async function connectMongo()');
+  const end = source.indexOf("if (!process.env.LAMBDA_TASK_ROOT)", start);
+  let attempts = 0;
+  const database = {};
+  const context = vm.createContext({ client: {
+    async connect() { if (++attempts === 1) throw new Error('temporary connection failure'); },
+    db() { return database; },
+  }, mongoDb: 'test', console: { log() {} } });
+  vm.runInContext('let db; let connecting = null;\n' + source.slice(start, end), context);
+  await assert.rejects(context.connectMongo(), /temporary connection failure/);
+  assert.equal(await context.connectMongo(), database);
+  assert.equal(await context.connectMongo(), database);
+  assert.equal(attempts, 2);
+});
