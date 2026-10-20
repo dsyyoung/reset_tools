@@ -15,6 +15,8 @@ const displayDeviceType = document.getElementById('display-device-type');
 const displaySerialNum = document.getElementById('display-serial-num');
 const errorMessage = document.getElementById('error-message');
 const copyButton = document.getElementById('copy-button');
+const reauthContainer = document.getElementById('reauth-container');
+const reauthLink = document.getElementById('reauth-link');
 
 // Resolve the correct API base URL using ENV loaded from config.js
 function getApiUrl() {
@@ -84,10 +86,22 @@ function setLoadingState(isLoading) {
 function resetCards() {
   statusSuccess.classList.add('hidden');
   statusError.classList.add('hidden');
+  reauthContainer.classList.add('hidden');
+  reauthLink.removeAttribute('href');
 }
 
 // Show success card with document details
 function showSuccess(data) {
+  reauthContainer.classList.add('hidden');
+  reauthLink.removeAttribute('href');
+  if (typeof data.res_id === 'string' && /^RES[0-9]{1,12}$/.test(data.res_id) &&
+      typeof data.object_id === 'string' && /^[a-f0-9]{24}$/i.test(data.object_id)) {
+    const url = new URL('https://resetnus.com/data');
+    url.searchParams.set('reset_id', data.res_id);
+    url.searchParams.set('object_id', data.object_id);
+    reauthLink.href = url.toString();
+    reauthContainer.classList.remove('hidden');
+  }
   displayUserId.textContent = data.user_id || 'N/A';
   displayResId.textContent = data.res_id || 'N/A';
   displayDeviceType.textContent = data.type || 'N/A';
@@ -98,6 +112,7 @@ function showSuccess(data) {
 
 // Show error card with backend/network messages
 function showError(messageText) {
+  resetCards();
   errorMessage.textContent = messageText;
   
   feedbackContainer.classList.remove('hidden');

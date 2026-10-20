@@ -139,7 +139,8 @@ app.get('/api/data', async (req, res) => {
 
 // Authorization Route
 app.get('/api/authorize', async (req, res) => {
-  const resId = req.query.res_id;
+  res.set('Cache-Control', 'no-store');
+  const resId = normalizeId(req.query.res_id);
 
   if (!resId) {
     return res.status(400).json({ error: 'Missing required query parameter: res_id.' });
@@ -159,6 +160,7 @@ app.get('/api/authorize', async (req, res) => {
     res.json({
       success: true,
       user_id: doc.user_id,
+      object_id: doc._id?.toHexString?.() || null,
       res_id: doc.res_id,
       type: doc.type,
       serialNumber: doc.serialNumber,
