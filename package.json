@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --check server.js public/app.js"
+    "test": "node --check server.js && node --check app.js && node --check completeness.js && node --test completeness.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1086.0",
@@ -13,6 +13,7 @@
     "dotenv": "^16.3.1",
     "express": "^4.22.2",
     "mongodb": "^7.3.0",
+    "pg": "^8.23.1",
     "serverless-http": "^3.2.0"
   }
 }

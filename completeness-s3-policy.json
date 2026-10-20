@@ -1,0 +1,29 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket"
+      ],
+      "Resource": "arn:aws:s3:::reset-clinical-data"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::reset-clinical-data/Biochemistry_1B/*",
+        "arn:aws:s3:::reset-clinical-data/Biochemistry_2A/*",
+        "arn:aws:s3:::reset-clinical-data/CTCA/*",
+        "arn:aws:s3:::reset-clinical-data/DEXA/*",
+        "arn:aws:s3:::reset-clinical-data/ECHO/*",
+        "arn:aws:s3:::reset-clinical-data/Liver Fibroscan/*",
+        "arn:aws:s3:::reset-clinical-data/MoCA_1A/*",
+        "arn:aws:s3:::reset-clinical-data/MoCA_2A/*",
+        "arn:aws:s3:::reset-clinical-data/Vascular scans/*"
+      ]
+    }
+  ]
+}

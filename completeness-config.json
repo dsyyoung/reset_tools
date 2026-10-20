@@ -1,0 +1,90 @@
+{
+  "bucket": "reset-clinical-data",
+  "sources": {
+    "1b.biochem": {
+      "key": "Biochemistry_1B/{res_id}.pdf"
+    },
+    "1b.liver": {
+      "key": "Liver Fibroscan/{res_id}.pdf"
+    },
+    "1b.dexa": {
+      "pattern": "DEXA/*/{res_id}/*.pdf"
+    },
+    "1c.echo": {
+      "key": "ECHO/{res_id}_E.pdf"
+    },
+    "1c.vascular": {
+      "key": "Vascular scans/{res_id}_V.pdf"
+    },
+    "1a.moca": {
+      "key": "MoCA_1A/0. MoCA/ {res_id}_MoCA.pdf"
+    },
+    "2a.moca": {
+      "key": "MoCA_2A/V2A MoCA/{res_id}_V2A_MoCA.pdf"
+    },
+    "2a.biochem": {
+      "pattern": "Biochemistry_2A/{res_id}-V2A_*.pdf"
+    },
+    "2b.ctca": {
+      "prefix": "CTCA/{res_id}/Report/",
+      "suffix": ".pdf"
+    },
+    "1a.golden_form": {
+      "type": "postgres",
+      "schema": "public",
+      "table": "golden_form",
+      "idColumn": "res_id",
+      "filters": {},
+      "visitColumn": "visit",
+      "visit": "1A"
+    },
+    "1a.selfq": {
+      "type": "postgres",
+      "schema": "public",
+      "table": "selfq",
+      "idColumn": "res_id",
+      "filters": {},
+      "visitColumn": "visit",
+      "visit": "1A"
+    },
+    "1b.pe": {
+      "type": "postgres",
+      "schema": "public",
+      "table": "pe_test",
+      "idColumn": "res_id",
+      "filters": {},
+      "visitColumn": "visit",
+      "visit": "1B"
+    },
+    "2a.medical_history": {
+      "type": "postgres",
+      "schema": "public",
+      "table": "medical_history",
+      "idColumn": "res_id",
+      "filters": {},
+      "visitColumn": "visit",
+      "visit": "2A"
+    },
+    "2a.selfq": {
+      "type": "postgres",
+      "schema": "public",
+      "table": "selfq",
+      "idColumn": "res_id",
+      "filters": {},
+      "visitColumn": "visit",
+      "visit": "2A"
+    },
+    "2a.pe": {
+      "type": "postgres",
+      "schema": "public",
+      "table": "pe_test",
+      "idColumn": "res_id",
+      "filters": {},
+      "visitColumn": "visit",
+      "visit": "2A"
+    }
+  },
+  "postgres": {
+    "database": "reset_clinical_test"
+  }
+}
