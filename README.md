@@ -88,13 +88,13 @@ The confirmed bucket is `reset-clinical-data`; `CLINICAL_DATA_BUCKET` can overri
 | Report | S3 key or pattern |
 | --- | --- |
 | Biochem 1B | `Biochemistry_1B/{res_id}.pdf` |
-| Biochem 2A | `Biochemistry_2A/{res_id}-V2A_*.pdf` |
+| Biochem 2A | Participant PDF in `Biochemistry_2A/`, with underscore or hyphen filename separators |
 | CTCA 2B | Any nonempty PDF under `CTCA/{res_id}/Report/` |
 | DEXA 1B | `DEXA/*/{res_id}/*.pdf` |
 | Echo 1C | `ECHO/{res_id}_E.pdf` |
 | Liver 1B | `Liver Fibroscan/{res_id}.pdf` |
-| MoCA 1A | `MoCA_1A/0. MoCA/ {res_id}_MoCA.pdf` (leading filename space preserved) |
-| MoCA 2A | `MoCA_2A/V2A MoCA/{res_id}_V2A_MoCA.pdf` |
+| MoCA 1A | Participant PDF in `MoCA_1A/0. MoCA/`, with or without a leading filename space |
+| MoCA 2A | Participant PDF in `MoCA_2A/V2A MoCA/`, regardless of suffix spelling/order |
 | Vascular 1C | `Vascular scans/{res_id}_V.pdf` |
 
 A `key` uses exact metadata lookup. A `prefix` must contain `{res_id}` and end in `/`. A `pattern` supports `*` within one path segment, with all other characters treated literally. DEXA scans the `DEXA/` prefix to find the participant under any date folder. Finding one nonempty PDF counts as availability; this does not assert that every DEXA component is present. Year 3 and ECG are excluded for now.
@@ -126,3 +126,5 @@ Run `npm test` for offline status, validation, and pagination tests. The Lambda 
 For Lambda, set the PostgreSQL variables under Configuration → Environment variables. For local development, add them to the ignored `.env` file; `.env.example` contains placeholders only. The Lambda network must be able to reach the PostgreSQL host and port (including VPC routing and database security-group access when applicable). Never put database credentials in frontend `config.js`.
 
 For AWS RDS in Lambda, the PostgreSQL adapter automatically loads `/var/runtime/ca-cert.pem` with certificate verification enabled. `PGSSLROOTCERT` overrides this path. `completeness-s3-policy.json` documents the scoped read policy; applying IAM permissions requires explicit approval.
+
+MoCA and Biochem 2A availability uses their report-specific folder plus an exact participant ID followed by a separator or extension. Label case, suffix order, and Unicode MoCA labels do not affect matching. Only nonempty PDFs directly inside the configured folder count; neighboring IDs and nested unrelated files are excluded. MoCA 1A checks both known leading-space variants.

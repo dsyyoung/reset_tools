@@ -50,9 +50,45 @@ async function checkPostgres(pool, source, id, report) {
   if (typeof result.rows?.[0]?.found !== 'boolean') throw new Error('Invalid availability response');
   return { ...report, status: result.rows[0].found ? 'found' : 'missing' };
 }
+async function checkParticipantFiles(s3, bucket, source, id, report) {
+  const folder = source.participantFolder;
+  const spaces = source.leadingSpaces || [0];
+  if (!bucket || typeof folder !== 'string' || !folder.endsWith('/') ||
+      !Array.isArray(spaces) || !spaces.length || spaces.some(n => !Number.isInteger(n) || n < 0 || n > 4)) {
+    return { ...report, status: 'unknown', reason: 'Source not configured' };
+  }
+  // The report-specific folder identifies the type and visit. Ignore the spelling
+  // and ordering of suffix labels, but require an exact participant-ID boundary.
+  const filename = new RegExp('^' + id + '(?=[_ .-]).*\\.pdf$', 'i');
+  let incomplete = false;
+  for (const count of spaces) {
+    const prefix = folder + ' '.repeat(count) + id;
+    let token;
+    let finished = false;
+    for (let page = 0; page < 20; page++) {
+      const response = await s3.send(new ListObjectsV2Command({
+        Bucket: bucket, Prefix: prefix, MaxKeys: 1000,
+        ...(token ? { ContinuationToken: token } : {}),
+      }));
+      const found = (response.Contents || []).some(file => {
+        if (!file.Key?.startsWith(folder) || !(file.Size > 0)) return false;
+        const basename = file.Key.slice(folder.length).trimStart();
+        return !basename.includes('/') && filename.test(basename);
+      });
+      if (found) return { ...report, status: 'found' };
+      if (!response.IsTruncated) { finished = true; break; }
+      if (!response.NextContinuationToken || token === response.NextContinuationToken) break;
+      token = response.NextContinuationToken;
+    }
+    if (!finished) incomplete = true;
+  }
+  return { ...report, status: incomplete ? 'unknown' : 'missing',
+    ...(incomplete ? { reason: 'Source could not be fully checked' } : {}) };
+}
 async function checkReport(s3, config, id, report, postgres) {
   const source = config.sources?.[report.id];
   if (source?.type === 'postgres') return checkPostgres(postgres, source, id, report);
+  if (source?.participantFolder) return checkParticipantFiles(s3, config.bucket, source, id, report);
   if (config.bucket && typeof source?.key === 'string' && source.key.includes('{res_id}')) {
     try {
       const object = await s3.send(new HeadObjectCommand({ Bucket: config.bucket, Key: source.key.replaceAll('{res_id}', id) }));

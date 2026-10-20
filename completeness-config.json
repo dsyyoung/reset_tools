@@ -17,13 +17,17 @@
       "key": "Vascular scans/{res_id}_V.pdf"
     },
     "1a.moca": {
-      "key": "MoCA_1A/0. MoCA/ {res_id}_MoCA.pdf"
+      "participantFolder": "MoCA_1A/0. MoCA/",
+      "leadingSpaces": [
+        0,
+        1
+      ]
     },
     "2a.moca": {
-      "key": "MoCA_2A/V2A MoCA/{res_id}_V2A_MoCA.pdf"
+      "participantFolder": "MoCA_2A/V2A MoCA/"
     },
     "2a.biochem": {
-      "pattern": "Biochemistry_2A/{res_id}-V2A_*.pdf"
+      "participantFolder": "Biochemistry_2A/"
     },
     "2b.ctca": {
       "prefix": "CTCA/{res_id}/Report/",

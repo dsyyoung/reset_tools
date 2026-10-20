@@ -79,19 +79,12 @@ test('DEXA matches dated participant folders without matching neighboring IDs or
   assert.equal(matcher.matches('DEXA/02 April 2025/RES0721/Hip.pdf'), true);
   for (const key of ['DEXA/02 April 2025/RES07210/Hip.pdf', 'DEXA/02 April 2025/RES0721/HipXpdf', 'DEXA/02 April 2025/RES0721/other/Hip.pdf']) assert.equal(matcher.matches(key), false);
 });
-test('Biochem 2A matches the supplied variable suffix with the participant boundary', () => {
-  const matcher = patternMatcher(actualConfig.sources['2a.biochem'].pattern, 'RES0001');
-  assert.equal(matcher.matches('Biochemistry_2A/RES0001-V2A_-RES0001-V2A-31_25-2287939.pdf'), true);
-  assert.equal(matcher.matches('Biochemistry_2A/RES00010-V2A_report.pdf'), false);
-});
-test('confirmed exact S3 paths preserve MoCA whitespace and report suffixes', async () => {
+test('confirmed exact S3 paths preserve report suffixes', async () => {
   const keys = [];
   await checkCompleteness({ async send(command) {
     if (command.input.Key) keys.push(command.input.Key);
     return { ContentLength: 50, Contents: [] };
   } }, actualConfig, 'RES0425');
-  assert.ok(keys.includes('MoCA_1A/0. MoCA/ RES0425_MoCA.pdf'));
-  assert.ok(keys.includes('MoCA_2A/V2A MoCA/RES0425_V2A_MoCA.pdf'));
   assert.ok(keys.includes('Liver Fibroscan/RES0425.pdf'));
   assert.ok(keys.includes('ECHO/RES0425_E.pdf'));
   assert.ok(keys.includes('Vascular scans/RES0425_V.pdf'));
@@ -145,4 +138,49 @@ test('PostgreSQL pool is optional, uses the requested database, and does not reu
   assert.equal(pool.options.ssl.rejectUnauthorized, true);
   assert.equal(pool.options.options, '-c default_transaction_read_only=on');
   await pool.end();
+});
+
+async function checkFilename(reportId, participant, keys) {
+  const requests = [];
+  const result = await checkCompleteness({ async send(command) {
+    requests.push(command.input.Prefix);
+    return { Contents: keys.filter(file => file.Key.startsWith(command.input.Prefix)) };
+  } }, { bucket: actualConfig.bucket, sources: { [reportId]: actualConfig.sources[reportId] } }, participant);
+  return { report: result.visits.flatMap(v => v.reports).find(r => r.id === reportId), requests };
+}
+test('RES0049: underscore Biochem and Latin/Cyrillic MoCA filenames are found', async () => {
+  for (const [report, key] of [
+    ['2a.biochem', 'Biochemistry_2A/RES0049_V2A_-RES0049V2A-31_26-2418089.pdf'],
+    ['1a.moca', 'MoCA_1A/0. MoCA/RES0049_MOCA.pdf'],
+    ['2a.moca', 'MoCA_2A/V2A MoCA/RES0049_МоСА_V2A.pdf'],
+  ]) {
+    const result = await checkFilename(report, 'RES0049', [{ Key: key, Size: 100 }]);
+    assert.equal(result.report.status, 'found');
+    assert.ok(result.requests.every(prefix => prefix.endsWith('RES0049')));
+  }
+});
+test('previous hyphen Biochem, spaced MoCA and reordered MoCA paths remain supported', async () => {
+  for (const [report, participant, key] of [
+    ['2a.biochem', 'RES0001', 'Biochemistry_2A/RES0001-V2A_-RES0001-V2A-31_25-2287939.pdf'],
+    ['1a.moca', 'RES0425', 'MoCA_1A/0. MoCA/ RES0425_MoCA.pdf'],
+    ['2a.moca', 'RES0001', 'MoCA_2A/V2A MoCA/RES0001_V2A_MoCA.pdf'],
+  ]) assert.equal((await checkFilename(report, participant, [{ Key: key, Size: 100 }])).report.status, 'found');
+});
+test('participant matching rejects neighboring IDs, nested files, wrong extensions and empty PDFs', async () => {
+  for (const report of ['1a.moca', '2a.moca', '2a.biochem']) {
+    const folder = actualConfig.sources[report].participantFolder;
+    const files = ['RES00490_MOCA.pdf', 'RES0049A_MOCA.pdf', 'RES0049/sub/report.pdf', 'RES0049_MOCA.txt', 'RES0049_MOCA.pdf.backup'].map(key => ({ Key: folder + key, Size: 100 }));
+    files.push({ Key: folder + 'RES0049_MOCA.pdf', Size: 0 });
+    assert.equal((await checkFilename(report, 'RES0049', files)).report.status, 'missing');
+  }
+});
+test('participant file matching handles pagination and incomplete listings', async () => {
+  for (const incomplete of [false, true]) {
+    let calls = 0;
+    const result = await checkCompleteness({ async send() {
+      if (!calls++) return { Contents: [], IsTruncated: true, NextContinuationToken: 'next' };
+      return incomplete ? { IsTruncated: true } : { Contents: [{ Key: 'Biochemistry_2A/RES0049_report.PDF', Size: 10 }] };
+    } }, { bucket: actualConfig.bucket, sources: { '2a.biochem': actualConfig.sources['2a.biochem'] } }, 'RES0049');
+    assert.equal(result.visits.flatMap(v => v.reports).find(r => r.id === '2a.biochem').status, incomplete ? 'unknown' : 'found');
+  }
 });
