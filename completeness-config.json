@@ -11,10 +11,28 @@
       "pattern": "DEXA/*/{res_id}/*.pdf"
     },
     "1c.echo": {
-      "key": "ECHO/{res_id}_E.pdf"
+      "key": "ECHO/{res_id}_E.pdf",
+      "fallback": {
+        "type": "postgres",
+        "schema": "public",
+        "table": "echo_test",
+        "idColumn": "res_id",
+        "filters": {},
+        "visitColumn": "visit",
+        "visit": "1C"
+      }
     },
     "1c.vascular": {
-      "key": "Vascular scans/{res_id}_V.pdf"
+      "participantFolder": "Vascular scans/",
+      "fallback": {
+        "type": "postgres",
+        "schema": "public",
+        "table": "vascular_test",
+        "idColumn": "res_id",
+        "filters": {},
+        "visitColumn": "visit",
+        "visit": "1C"
+      }
     },
     "1a.moca": {
       "participantFolder": "MoCA_1A/0. MoCA/",

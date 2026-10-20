@@ -119,13 +119,29 @@ async function checkReport(s3, config, id, report, postgres) {
   }
   return { ...report, status: 'unknown', reason: 'Source could not be fully checked' };
 }
+async function checkWithFallback(s3, config, id, report, postgres) {
+  const fallback = config.sources?.[report.id]?.fallback;
+  let primary;
+  try { primary = await checkReport(s3, config, id, report, postgres); }
+  catch (error) {
+    if (!fallback) throw error;
+    primary = { ...report, status: 'unknown', reason: 'PDF availability could not be checked' };
+  }
+  if (!fallback || primary.status === 'found') return primary;
+  const secondary = await checkPostgres(postgres, fallback, id, report);
+  if (secondary.status === 'found') return { ...secondary, source: 'postgres', reason: primary.status === 'missing'
+    ? 'Available in database; PDF not found'
+    : 'Available in database; PDF availability could not be checked' };
+  if (secondary.status === 'unknown') return secondary;
+  return primary;
+}
 async function checkCompleteness(s3, config, resId, postgres = null) {
   const visits = [];
   // Bound concurrency to the number of reports in one visit (at most five).
   for (const [year, visit, names] of VISITS) {
     const reports = await Promise.all(names.map(async name => {
       const report = { id: `${visit}.${name}`, name: LABELS[name] };
-      try { return await checkReport(s3, config, resId, report, postgres); }
+      try { return await checkWithFallback(s3, config, resId, report, postgres); }
       catch (error) {
         const safeCode = value => typeof value === 'string' && /^[A-Za-z0-9_]+$/.test(value) ? value : 'Unknown';
         console.warn('Completeness source check failed', JSON.stringify({

@@ -87,7 +87,6 @@ test('confirmed exact S3 paths preserve report suffixes', async () => {
   } }, actualConfig, 'RES0425');
   assert.ok(keys.includes('Liver Fibroscan/RES0425.pdf'));
   assert.ok(keys.includes('ECHO/RES0425_E.pdf'));
-  assert.ok(keys.includes('Vascular scans/RES0425_V.pdf'));
 });
 test('DEXA scan continues after unrelated participants and finds the requested participant', async () => {
   let count = 0;
@@ -100,7 +99,7 @@ test('DEXA scan continues after unrelated participants and finds the requested p
 });
 test('PostgreSQL checks parameterize IDs and normalize visit labels without reading clinical fields', async () => {
   const queries = [];
-  const result = await checkCompleteness({ async send() { return { ContentLength: 1, Contents: [] }; } }, actualConfig, 'RES0001', { async query(query) {
+  const result = await checkCompleteness({ async send() { return { ContentLength: 1, Contents: [{ Key: 'Vascular scans/RES0001.pdf', Size: 1 }] }; } }, actualConfig, 'RES0001', { async query(query) {
     queries.push(query);
     assert.ok(query.text.startsWith('SELECT EXISTS'));
     assert.ok(!query.text.includes('RES0001'));
@@ -183,4 +182,40 @@ test('participant file matching handles pagination and incomplete listings', asy
     } }, { bucket: actualConfig.bucket, sources: { '2a.biochem': actualConfig.sources['2a.biochem'] } }, 'RES0049');
     assert.equal(result.visits.flatMap(v => v.reports).find(r => r.id === '2a.biochem').status, incomplete ? 'unknown' : 'found');
   }
+});
+test('vascular detects PDFs with and without suffix without querying PostgreSQL', async () => {
+  for (const name of ['RES0001.pdf', 'RES0001_V.pdf']) {
+    let queried = false;
+    const result = await checkCompleteness({ async send() { return { Contents: [{ Key: 'Vascular scans/' + name, Size: 100 }] }; } },
+      { bucket: actualConfig.bucket, sources: { '1c.vascular': actualConfig.sources['1c.vascular'] } }, 'RES0001',
+      { async query() { queried = true; return { rows: [{ found: false }] }; } });
+    assert.equal(result.visits[2].reports[1].status, 'found');
+    assert.equal(queried, false);
+  }
+});
+test('Echo and Vascular use participant/visit-scoped database fallback when PDF absent', async () => {
+  for (const id of ['1c.echo', '1c.vascular']) {
+    let query;
+    const result = await checkCompleteness({ async send() { throw { $metadata: { httpStatusCode: 404 } }; } },
+      { bucket: actualConfig.bucket, sources: { [id]: actualConfig.sources[id] } }, 'RES0001',
+      { async query(q) { query = q; return { rows: [{ found: true }] }; } });
+    const report = result.visits[2].reports.find(r => r.id === id);
+    assert.equal(report.status, 'found');
+    assert.equal(report.source, 'postgres');
+    assert.deepEqual(query.values, ['RES0001', '1C']);
+    assert.ok(query.text.includes(actualConfig.sources[id].fallback.table));
+  }
+});
+test('fallback only reports missing when both sources confirm absence', async () => {
+  for (const [primaryError, dbFound, expected] of [[404, false, 'missing'], [403, false, 'unknown'], [403, true, 'found']]) {
+    const result = await checkCompleteness({ async send() { throw { $metadata: { httpStatusCode: primaryError } }; } },
+      { bucket: actualConfig.bucket, sources: { '1c.echo': actualConfig.sources['1c.echo'] } }, 'RES0001',
+      { async query() { return { rows: [{ found: dbFound }] }; } });
+    assert.equal(result.visits[2].reports[0].status, expected);
+  }
+});
+test('missing PDF with unavailable database remains unknown', async () => {
+  const result = await checkCompleteness({ async send() { return { Contents: [] }; } },
+    { bucket: actualConfig.bucket, sources: { '1c.vascular': actualConfig.sources['1c.vascular'] } }, 'RES0001');
+  assert.equal(result.visits[2].reports[1].status, 'unknown');
 });
