@@ -17,6 +17,19 @@ const errorMessage = document.getElementById('error-message');
 const copyButton = document.getElementById('copy-button');
 const reauthContainer = document.getElementById('reauth-container');
 const reauthLink = document.getElementById('reauth-link');
+const reauthCopyStatus = document.getElementById('reauth-copy-status');
+let reauthUrl = '';
+
+reauthLink.addEventListener('click', async () => {
+  const url = reauthUrl;
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    if (reauthUrl === url) reauthCopyStatus.textContent = 'Re-auth link copied.';
+  } catch {
+    if (reauthUrl === url) reauthCopyStatus.textContent = 'Could not copy the link. Please try again.';
+  }
+});
 
 // Resolve the correct API base URL using ENV loaded from config.js
 function getApiUrl() {
@@ -87,19 +100,21 @@ function resetCards() {
   statusSuccess.classList.add('hidden');
   statusError.classList.add('hidden');
   reauthContainer.classList.add('hidden');
-  reauthLink.removeAttribute('href');
+  reauthUrl = '';
+  reauthCopyStatus.textContent = '';
 }
 
 // Show success card with document details
 function showSuccess(data) {
   reauthContainer.classList.add('hidden');
-  reauthLink.removeAttribute('href');
+  reauthUrl = '';
+  reauthCopyStatus.textContent = '';
   if (typeof data.res_id === 'string' && /^RES[0-9]{1,12}$/.test(data.res_id) &&
       typeof data.object_id === 'string' && /^[a-f0-9]{24}$/i.test(data.object_id)) {
     const url = new URL('https://resetnus.com/data');
     url.searchParams.set('reset_id', data.res_id);
     url.searchParams.set('object_id', data.object_id);
-    reauthLink.href = url.toString();
+    reauthUrl = url.toString();
     reauthContainer.classList.remove('hidden');
   }
   displayUserId.textContent = data.user_id || 'N/A';

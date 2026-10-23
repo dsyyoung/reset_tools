@@ -4,9 +4,23 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'server.js'
+      - 'completeness-service.js'
+      - 'completeness-postgres.js'
+      - 'completeness-config.json'
+      - 'package.json'
+      - 'package-lock.json'
   pull_request:
     branches:
       - main
+    paths:
+      - 'server.js'
+      - 'completeness-service.js'
+      - 'completeness-postgres.js'
+      - 'completeness-config.json'
+      - 'package.json'
+      - 'package-lock.json'
 
 jobs:
   build-and-deploy:
