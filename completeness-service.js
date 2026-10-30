@@ -3,7 +3,7 @@ const VISITS = [
   [1, '1a', ['golden_form', 'selfq', 'moca']],
   [1, '1b', ['biochem', 'liver', 'dexa', 'pe', 'biobank']],
   [1, '1c', ['echo', 'vascular']],
-  [2, '2a', ['medical_history', 'selfq', 'moca', 'biochem', 'pe', 'biobank']],
+  [2, '2a', ['medical_history', 'selfq', 'moca', 'biochem', 'liver', 'pe', 'biobank']],
   [2, '2b', ['ctca']],
 ];
 const LABELS = { biobank: 'Biobank collection', golden_form: 'Golden Form', medical_history: 'Medical History', selfq: 'SelfQ', moca: 'MoCA', biochem: 'Biochem', liver: 'Liver', dexa: 'DEXA', pe: 'PE', echo: 'Echo', vascular: 'Vascular', ctca: 'CTCA' };
@@ -137,7 +137,7 @@ async function checkWithFallback(s3, config, id, report, postgres) {
 }
 async function checkCompleteness(s3, config, resId, postgres = null) {
   const visits = [];
-  // Bound concurrency to the number of reports in one visit (at most six).
+  // Bound concurrency to the number of reports in one visit (at most seven).
   for (const [year, visit, names] of VISITS) {
     const reports = await Promise.all(names.map(async name => {
       const report = { id: `${visit}.${name}`, name: LABELS[name] };

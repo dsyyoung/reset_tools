@@ -77,7 +77,7 @@ This application is built using a modern decoupled architecture:
 5. The frontend handles success and failure states, rendering them with clean typography, clipboard interactions, and transitions.
 ## Mobile report completeness
 
-Open `completeness.html` (also linked from the Data Viewer). The page lists 17 reports and collections across five visits, grouped by study year. It provides expandable cards, a missing-only filter, a last-checked time, and an explicitly labelled sample preview. The preview never calls the API.
+Open `completeness.html` (also linked from the Data Viewer). The page lists 18 reports and collections across five visits, grouped by study year. It provides expandable cards, a missing-only filter, a last-checked time, and an explicitly labelled sample preview. The preview never calls the API.
 
 `GET /api/completeness?res_id=RES5216` returns availability only, without report contents or S3 object paths. It uses S3 and PostgreSQL independently of the MongoDB connection middleware. The existing server still requires `MONGO_URI` at startup. Authentication is deferred, as requested.
 
@@ -92,7 +92,8 @@ The confirmed bucket is `reset-clinical-data`; `CLINICAL_DATA_BUCKET` can overri
 | CTCA 2B | Any nonempty PDF under `CTCA/{res_id}/Report/` |
 | DEXA 1B | `DEXA/*/{res_id}/*.pdf` |
 | Echo 1C | `ECHO/{res_id}_E.pdf` |
-| Liver 1B | `Liver Fibroscan/{res_id}.pdf` |
+| Liver 1B | `Liver Fibroscan/1B/{res_id}.pdf` |
+| Liver 2A | `Liver Fibroscan/2A/{res_id}.pdf` |
 | MoCA 1A | Participant PDF in `MoCA_1A/0. MoCA/`, with or without a leading filename space |
 | MoCA 2A | Participant PDF in `MoCA_2A/V2A MoCA/`, regardless of suffix spelling/order |
 | Vascular 1C | Participant PDF in `Vascular scans/` (including `{res_id}.pdf` and `{res_id}_V.pdf`) |
@@ -118,7 +119,7 @@ Supported mapping keys:
 - `1a.golden_form`, `1a.selfq`, `1a.moca`
 - `1b.biochem`, `1b.liver`, `1b.dexa`, `1b.pe`, `1b.biobank`
 - `1c.echo`, `1c.vascular`
-- `2a.medical_history`, `2a.selfq`, `2a.moca`, `2a.biochem`, `2a.pe`, `2a.biobank`
+- `2a.medical_history`, `2a.selfq`, `2a.moca`, `2a.biochem`, `2a.liver`, `2a.pe`, `2a.biobank`
 - `2b.ctca`
 
 The backend AWS role needs `s3:GetObject` for exact-key metadata checks and `s3:ListBucket` for prefix scans and to distinguish nonexistent keys from access-denied responses. A 403 remains unknown, not missing. It does not download reports. A nonempty matching file means “Found”; a fully checked prefix without a matching file means “Missing.” Missing mappings, access failures, and incomplete scans remain “Unable to check.” Each report scan is capped at 20 pages of 1,000 objects. This checks availability, not report content completeness, scheduling, exemptions, or participant registration.

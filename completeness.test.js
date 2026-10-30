@@ -8,7 +8,7 @@ test('IDs are normalized; query objects and path characters are rejected', () =>
 });
 test('unconfigured sources remain unknown without querying storage', async () => {
   const result = await checkCompleteness({ send() { throw Error('must not call'); } }, {}, 'RES1');
-  assert.deepEqual(result.counts, { total: 17, found: 0, missing: 0, unknown: 17 });
+  assert.deepEqual(result.counts, { total: 18, found: 0, missing: 0, unknown: 18 });
   assert.equal(result.visits.length, 5);
 });
 test('scoped file presence is found and no file metadata is exposed', async () => {
@@ -17,7 +17,7 @@ test('scoped file presence is found and no file metadata is exposed', async () =
     return { Contents: [{ Key: 'RES1/year1/visit1a/golden_form/report.pdf', Size: 100 }] };
   } }, config, 'RES1');
   assert.equal(result.counts.found, 1);
-  assert.equal(result.counts.unknown, 16);
+  assert.equal(result.counts.unknown, 17);
   assert.equal(JSON.stringify(result).includes('report.pdf'), false);
 });
 test('empty sources, directory markers, empty files and wrong extensions are missing', async () => {
@@ -29,7 +29,7 @@ test('empty sources, directory markers, empty files and wrong extensions are mis
 test('access denied remains unknown, never missing', async () => {
   const result = await checkCompleteness({ async send() { throw Error('AccessDenied secret'); } }, config, 'RES1');
   assert.equal(result.counts.missing, 0);
-  assert.equal(result.counts.unknown, 17);
+  assert.equal(result.counts.unknown, 18);
   assert.equal(JSON.stringify(result).includes('secret'), false);
 });
 test('pagination finds a report after directory markers', async () => {
@@ -43,12 +43,12 @@ test('pagination finds a report after directory markers', async () => {
 });
 test('incomplete pagination remains unknown', async () => {
   const result = await checkCompleteness({ async send() { return { IsTruncated: true }; } }, config, 'RES1');
-  assert.equal(result.counts.unknown, 17);
+  assert.equal(result.counts.unknown, 18);
 });
 test('prefixes must include participant ID and directory boundary', async () => {
   for (const prefix of ['all-participants/', '{res_id}']) {
     const result = await checkCompleteness({ async send() { assert.fail('unsafe prefix'); } }, { bucket: 'example', sources: { '1a.golden_form': { prefix } } }, 'RES1');
-    assert.equal(result.counts.unknown, 17);
+    assert.equal(result.counts.unknown, 18);
   }
 });
 test('flat report key uses metadata only and the exact participant filename', async () => {
@@ -68,8 +68,8 @@ test('exact-key absence differs from denied access and service errors', async ()
 
 const actualConfig = require('./completeness-config.json');
 const { patternMatcher, VISITS } = require('./completeness-service');
-test('schedule has 17 reports and collections and excludes ECG and Year 3', () => {
-  assert.equal(VISITS.flatMap(visit => visit[2]).length, 17);
+test('schedule has 18 reports and collections and excludes ECG and Year 3', () => {
+  assert.equal(VISITS.flatMap(visit => visit[2]).length, 18);
   assert.equal(VISITS.flatMap(visit => visit[2]).includes('ecg'), false);
   assert.equal(VISITS.some(visit => visit[0] === 3), false);
 });
@@ -85,7 +85,9 @@ test('confirmed exact S3 paths preserve report suffixes', async () => {
     if (command.input.Key) keys.push(command.input.Key);
     return { ContentLength: 50, Contents: [] };
   } }, actualConfig, 'RES0425');
-  assert.ok(keys.includes('Liver Fibroscan/RES0425.pdf'));
+  assert.ok(keys.includes('Liver Fibroscan/1B/RES0425.pdf'));
+  assert.ok(keys.includes('Liver Fibroscan/2A/RES0425.pdf'));
+  assert.ok(!keys.includes('Liver Fibroscan/RES0425.pdf'));
   assert.ok(keys.includes('ECHO/RES0425_E.pdf'));
 });
 test('DEXA scan continues after unrelated participants and finds the requested participant', async () => {
@@ -118,14 +120,14 @@ test('PostgreSQL errors and missing connections remain unknown', async () => {
   const config = { sources: { '1a.selfq': actualConfig.sources['1a.selfq'] } };
   for (const pool of [null, { async query() { throw Error('connection denied'); } }]) {
     const result = await checkCompleteness({}, config, 'RES1', pool);
-    assert.equal(result.counts.unknown, 17);
+    assert.equal(result.counts.unknown, 18);
   }
 });
 test('PostgreSQL rejects unscoped or invalid table mappings before querying', async () => {
   for (const change of [{ table: 'selfq; DROP TABLE selfq' }, { visitColumn: null }]) {
     const config = { sources: { '1a.selfq': { ...actualConfig.sources['1a.selfq'], ...change } } };
     const result = await checkCompleteness({}, config, 'RES1', { query() { assert.fail('Unsafe query'); } });
-    assert.equal(result.counts.unknown, 17);
+    assert.equal(result.counts.unknown, 18);
   }
 });
 test('PostgreSQL pool is optional, uses the requested database, and does not reuse HTTP PORT', async () => {
@@ -257,7 +259,7 @@ test('biobank availability uses the participant and visit_code independently for
     ['1b.biobank', 'Biobank collection', 'found'],
     ['2a.biobank', 'Biobank collection', 'missing'],
   ]);
-  assert.deepEqual(result.counts, { total: 17, found: 1, missing: 1, unknown: 15 });
+  assert.deepEqual(result.counts, { total: 18, found: 1, missing: 1, unknown: 16 });
 });
 
 test('biobank connection failures remain unknown rather than missing', async () => {
@@ -267,5 +269,27 @@ test('biobank connection failures remain unknown rather than missing', async () 
     const reports = result.visits.flatMap(v => v.reports).filter(r => r.id.endsWith('.biobank'));
     assert.ok(reports.every(r => r.status === 'unknown'));
     assert.equal(result.counts.missing, 0);
+  }
+});
+
+test('liver checks isolate each visit folder and distinguish missing files from access failures', async () => {
+  const sources = Object.fromEntries(['1b.liver', '2a.liver'].map(id => [id, actualConfig.sources[id]]));
+  for (const absentStatus of [404, 403]) {
+    for (const foundVisit of ['1B', '2A']) {
+      const keys = [];
+      const result = await checkCompleteness({ async send(command) {
+        assert.equal(command.constructor.name, 'HeadObjectCommand');
+        assert.equal(command.input.Bucket, actualConfig.bucket);
+        keys.push(command.input.Key);
+        if (command.input.Key === `Liver Fibroscan/${foundVisit}/RES0224.pdf`) return { ContentLength: 100 };
+        throw { $metadata: { httpStatusCode: absentStatus } };
+      } }, { bucket: actualConfig.bucket, sources }, 'RES0224');
+      assert.deepEqual(keys, ['Liver Fibroscan/1B/RES0224.pdf', 'Liver Fibroscan/2A/RES0224.pdf']);
+      const reports = result.visits.flatMap(v => v.reports).filter(r => r.id.endsWith('.liver'));
+      assert.equal(reports.length, 2);
+      for (const report of reports) {
+        assert.equal(report.status, report.id.startsWith(foundVisit.toLowerCase()) ? 'found' : absentStatus === 404 ? 'missing' : 'unknown');
+      }
+    }
   }
 });

@@ -5,7 +5,7 @@
       "key": "Biochemistry_1B/{res_id}.pdf"
     },
     "1b.liver": {
-      "key": "Liver Fibroscan/{res_id}.pdf"
+      "key": "Liver Fibroscan/1B/{res_id}.pdf"
     },
     "1b.dexa": {
       "pattern": "DEXA/*/{res_id}/*.pdf"
@@ -122,6 +122,9 @@
       "filters": {},
       "visitColumn": "visit_code",
       "visit": "2A"
+    },
+    "2a.liver": {
+      "key": "Liver Fibroscan/2A/{res_id}.pdf"
     }
   },
   "postgres": {
