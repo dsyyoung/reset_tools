@@ -58,6 +58,15 @@
     el('sample-notice').hidden = !sample;
     el('result-id').textContent = sample ? 'Sample participant' : payload.res_id;
     el('checked-at').textContent = sample ? 'Layout preview' : `Checked ${new Date(payload.checked_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    const onboarding = payload.onboarding;
+    const onboardedTime = el('onboarded-at');
+    onboardedTime.removeAttribute('datetime');
+    if (onboarding?.status === 'found' && typeof onboarding.start_date === 'string') {
+      onboardedTime.textContent = onboarding.start_date;
+      onboardedTime.setAttribute('datetime', onboarding.start_date.replace(' ', 'T'));
+    } else {
+      onboardedTime.textContent = onboarding?.status === 'missing' ? 'Not recorded' : 'Unable to check';
+    }
     const { total, found, missing, unknown } = payload.counts;
     el('total-found').textContent = `${found} of ${total} reports found`;
     el('progress').setAttribute('aria-valuemax', total);
@@ -120,6 +129,6 @@
     el('message').textContent = '';
     const counts = { total: 0, found: 0, missing: 0, unknown: 0 };
     visits.flatMap(visit => visit.reports).forEach(report => { counts.total++; counts[report.status]++; });
-    show({ res_id: 'SAMPLE', counts, visits }, true);
+    show({ res_id: 'SAMPLE', counts, visits, onboarding: { status: 'found', start_date: '2024-03-01 10:16:47' } }, true);
   });
 })();

@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { normalizeId, checkCompleteness } = require('./completeness-service');
+const { normalizeId, checkCompleteness, getOnboarding } = require('./completeness-service');
 const config = { bucket: 'example-bucket', sources: { '1a.golden_form': { prefix: '{res_id}/year1/visit1a/golden_form/', suffix: '.pdf' } } };
 test('IDs are normalized; query objects and path characters are rejected', () => {
   assert.equal(normalizeId(' res5216 '), 'RES5216');
@@ -364,4 +364,78 @@ test('Visit 3A does not inherit Year 2 files and keeps unavailable sources unkno
     const visit = result.visits.find(v => v.id === '3a');
     assert.ok(visit.reports.every(r => r.status === (unavailable ? 'unknown' : 'missing')));
   }
+});
+
+test('onboarding reads GoldenForm StartDate for the participant and visit 1A without timezone conversion', async () => {
+  const result = await getOnboarding({ async query(query) {
+    assert.deepEqual(query.values, ['RES1051', '1A']);
+    assert.ok(query.text.includes('"public"."golden_form"'));
+    assert.ok(query.text.includes('MIN(NULLIF(BTRIM("StartDate"), \'\'))'));
+    assert.ok(query.text.includes('"res_id" = $1'));
+    assert.ok(query.text.includes('regexp_replace'));
+    assert.ok(!query.text.includes('RES1051'));
+    return { rows: [{ start_date: '2024-02-29 23:59:59' }] };
+  } }, 'RES1051');
+  assert.deepEqual(result, { status: 'found', start_date: '2024-02-29 23:59:59' });
+});
+
+test('onboarding distinguishes absent dates from unavailable or invalid timestamps', async () => {
+  assert.deepEqual(await getOnboarding({ async query() { return { rows: [{ start_date: null }] }; } }, 'RES1'), { status: 'missing', start_date: null });
+  for (const value of [undefined, '', 'not a date', '2025-02-29 10:00:00', '2024-04-31 10:00:00', '2024-01-01 24:00:00', '2024-01-01 10:00:00Z']) {
+    assert.deepEqual(await getOnboarding({ async query() { return { rows: [{ start_date: value }] }; } }, 'RES1'), { status: 'unknown', start_date: null });
+  }
+  for (const pool of [null, { async query() { throw Error('private connection details'); } }]) {
+    assert.deepEqual(await getOnboarding(pool, 'RES1'), { status: 'unknown', start_date: null });
+  }
+});
+
+function completenessPage() {
+  const vm = require('node:vm');
+  const fs = require('node:fs');
+  const elements = new Map();
+  let response;
+  let fetches = 0;
+  function node() {
+    return { textContent: '', value: '', checked: false, hidden: false, events: {}, attrs: {}, children: [], style: {}, firstElementChild: { style: {} },
+      addEventListener(name, fn) { this.events[name] = fn; },
+      append(...items) { this.children.push(...items); },
+      replaceChildren(...items) { this.children = items; },
+      setAttribute(name, value) { this.attrs[name] = value; },
+      removeAttribute(name) { delete this.attrs[name]; }, focus() {} };
+  }
+  const context = vm.createContext({ document: { createElement: node, getElementById(id) {
+    if (!elements.has(id)) elements.set(id, node());
+    return elements.get(id);
+  } }, location: { hostname: 'localhost', protocol: 'http:' }, ENV: { LOCAL_URL: 'http://localhost' }, AbortController,
+  setTimeout, clearTimeout, fetch: async () => { fetches++; return { ok: true, json: async () => response }; } });
+  vm.runInContext(fs.readFileSync('completeness.js', 'utf8'), context);
+  return { elements, get fetches() { return fetches; }, async search(onboarding, id = 'RES1051') {
+    response = { res_id: id, checked_at: '2026-10-31T00:00:00Z', counts: { total: 22, found: 0, missing: 22, unknown: 0 }, visits: [], onboarding };
+    context.document.getElementById('participant-id').value = id;
+    await elements.get('search-form').events.submit({ preventDefault() {} });
+  } };
+}
+
+test('onboarding display preserves source wall-clock time and clears dates when switching participants', async () => {
+  const page = completenessPage();
+  await page.search({ status: 'found', start_date: '2024-03-01 23:59:59' });
+  const time = page.elements.get('onboarded-at');
+  assert.equal(time.textContent, '2024-03-01 23:59:59');
+  assert.equal(time.attrs.datetime, '2024-03-01T23:59:59');
+  for (const [onboarding, expected] of [[{ status: 'missing', start_date: null }, 'Not recorded'], [{ status: 'unknown', start_date: null }, 'Unable to check'], [undefined, 'Unable to check']]) {
+    await page.search(onboarding, 'RES0001');
+    assert.equal(time.textContent, expected);
+    assert.equal(time.attrs.datetime, undefined);
+    assert.equal(page.elements.get('result-id').textContent, 'RES0001');
+    assert.equal(page.elements.get('total-found').textContent, '0 of 22 reports found');
+  }
+});
+
+test('sample onboarding stays explicitly labelled and does not fetch participant data', () => {
+  const page = completenessPage();
+  page.elements.get('sample-button').events.click();
+  assert.equal(page.fetches, 0);
+  assert.equal(page.elements.get('sample-notice').hidden, false);
+  assert.equal(page.elements.get('result-id').textContent, 'Sample participant');
+  assert.equal(page.elements.get('onboarded-at').textContent, '2024-03-01 10:16:47');
 });

@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { S3Client, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 
-const { normalizeId, checkCompleteness } = require('./completeness-service');
+const { normalizeId, checkCompleteness, getOnboarding } = require('./completeness-service');
 const completenessConfig = require('./completeness-config.json');
 const { createQuestionnairePool } = require('./completeness-postgres');
 const questionnairePool = createQuestionnairePool();
@@ -84,8 +84,11 @@ app.get('/api/completeness', async (req, res) => {
   const resId = normalizeId(req.query.res_id);
   if (!resId) return res.status(400).json({ error: 'Enter a RESET ID such as RES5216.' });
   try {
-    const result = await checkCompleteness(s3Client, { ...completenessConfig, bucket: process.env.CLINICAL_DATA_BUCKET || completenessConfig.bucket }, resId, questionnairePool);
-    res.json(result);
+    const [result, onboarding] = await Promise.all([
+      checkCompleteness(s3Client, { ...completenessConfig, bucket: process.env.CLINICAL_DATA_BUCKET || completenessConfig.bucket }, resId, questionnairePool),
+      getOnboarding(questionnairePool, resId),
+    ]);
+    res.json({ ...result, onboarding });
   } catch {
     res.status(503).json({ error: 'Reports could not be checked. Please try again.' });
   }

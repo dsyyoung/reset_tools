@@ -159,4 +159,29 @@ async function checkCompleteness(s3, config, resId, postgres = null) {
   reports.forEach(report => counts[report.status]++);
   return { res_id: resId, checked_at: new Date().toISOString(), counts, visits };
 }
-module.exports = { normalizeId, checkCompleteness, VISITS, LABELS, patternMatcher };
+async function getOnboarding(pool, resId) {
+  const unavailable = { status: 'unknown', start_date: null };
+  if (!pool) return unavailable;
+  try {
+    // StartDate is source-local text without a timezone. ISO ordering selects
+    // the earliest recorded start if a participant ever has duplicate forms.
+    const result = await pool.query({
+      text: `SELECT MIN(NULLIF(BTRIM("StartDate"), '')) AS start_date
+        FROM "public"."golden_form"
+        WHERE "res_id" = $1
+          AND regexp_replace(upper(trim("visit")), '^VISIT[ _-]*', '') = $2`,
+      values: [resId, '1A'],
+    });
+    const value = result.rows?.[0]?.start_date;
+    if (value === null) return { status: 'missing', start_date: null };
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) return unavailable;
+    // UTC is used only for calendar validation, never to convert the source time.
+    const date = new Date(value.replace(' ', 'T') + 'Z');
+    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 19).replace('T', ' ') !== value) return unavailable;
+    return { status: 'found', start_date: value };
+  } catch {
+    console.warn('Participant onboarding lookup unavailable');
+    return unavailable;
+  }
+}
+module.exports = { normalizeId, checkCompleteness, getOnboarding, VISITS, LABELS, patternMatcher };

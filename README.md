@@ -79,7 +79,9 @@ This application is built using a modern decoupled architecture:
 
 Open `completeness.html` (also linked from the Data Viewer). The page lists 22 reports and collections across six visits, grouped by study year. It provides expandable cards, a missing-only filter, a last-checked time, and an explicitly labelled sample preview. The preview never calls the API.
 
-`GET /api/completeness?res_id=RES5216` returns availability only, without report contents or S3 object paths. It uses S3 and PostgreSQL independently of the MongoDB connection middleware. The existing server still requires `MONGO_URI` at startup. Authentication is deferred, as requested.
+`GET /api/completeness?res_id=RES5216` returns report availability and participant onboarding time, without report contents or S3 object paths. It uses S3 and PostgreSQL independently of the MongoDB connection middleware. The existing server still requires `MONGO_URI` at startup. Authentication is deferred, as requested.
+
+The participant overview displays “Onboarded” from `public.golden_form."StartDate"`, scoped to the participant and normalized visit 1A. The API returns `onboarding: { status, start_date }`. The source stores `YYYY-MM-DD HH:mm:ss` text without a timezone, so the page preserves that wall-clock time without browser timezone conversion. If multiple matching rows exist, the earliest nonblank value is used. No row or a blank date displays “Not recorded”; invalid dates and lookup failures display “Unable to check”. Onboarding is separate from the 22 availability checks and does not change their counts.
 
 ### Configure real sources
 
