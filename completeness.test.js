@@ -149,6 +149,34 @@ async function checkFilename(reportId, participant, keys) {
   } }, { bucket: actualConfig.bucket, sources: { [reportId]: actualConfig.sources[reportId] } }, participant);
   return { report: result.visits.flatMap(v => v.reports).find(r => r.id === reportId), requests };
 }
+test('Biochem 1B finds RES1051 suffixed reports and retains plain and hyphen filenames', async () => {
+  for (const key of [
+    'Biochemistry_1B/RES1051_V1B_-RES1051V1B-31_26-2418094.pdf',
+    'Biochemistry_1B/RES1051.pdf',
+    'Biochemistry_1B/RES1051-V1B_report.PDF',
+  ]) {
+    const result = await checkFilename('1b.biochem', 'RES1051', [{ Key: key, Size: 100 }]);
+    assert.equal(result.report.status, 'found');
+    assert.deepEqual(result.requests, ['Biochemistry_1B/RES1051']);
+  }
+});
+test('Biochem 1B continues through pages and keeps incomplete or denied checks unknown', async () => {
+  const config = { bucket: actualConfig.bucket, sources: { '1b.biochem': actualConfig.sources['1b.biochem'] } };
+  for (const scenario of ['found', 'missing', 'incomplete', 'denied']) {
+    let calls = 0;
+    const result = await checkCompleteness({ async send(command) {
+      assert.equal(command.constructor.name, 'ListObjectsV2Command');
+      assert.equal(command.input.Prefix, 'Biochemistry_1B/RES1051');
+      if (scenario === 'denied') throw { $metadata: { httpStatusCode: 403 } };
+      if (!calls++) return { Contents: [{ Key: 'Biochemistry_1B/RES10510.pdf', Size: 100 }], IsTruncated: true, NextContinuationToken: 'page2' };
+      assert.equal(command.input.ContinuationToken, 'page2');
+      if (scenario === 'found') return { Contents: [{ Key: 'Biochemistry_1B/RES1051_V1B_-RES1051V1B-31_26-2418094.pdf', Size: 100 }] };
+      return scenario === 'incomplete' ? { IsTruncated: true } : { Contents: [] };
+    } }, config, 'RES1051');
+    const report = result.visits.flatMap(v => v.reports).find(r => r.id === '1b.biochem');
+    assert.equal(report.status, ['incomplete', 'denied'].includes(scenario) ? 'unknown' : scenario);
+  }
+});
 test('RES0049: underscore Biochem and Latin/Cyrillic MoCA filenames are found', async () => {
   for (const [report, key] of [
     ['2a.biochem', 'Biochemistry_2A/RES0049_V2A_-RES0049V2A-31_26-2418089.pdf'],
@@ -168,7 +196,7 @@ test('previous hyphen Biochem, spaced MoCA and reordered MoCA paths remain suppo
   ]) assert.equal((await checkFilename(report, participant, [{ Key: key, Size: 100 }])).report.status, 'found');
 });
 test('participant matching rejects neighboring IDs, nested files, wrong extensions and empty PDFs', async () => {
-  for (const report of ['1a.moca', '2a.moca', '2a.biochem']) {
+  for (const report of ['1a.moca', '2a.moca', '1b.biochem', '2a.biochem']) {
     const folder = actualConfig.sources[report].participantFolder;
     const files = ['RES00490_MOCA.pdf', 'RES0049A_MOCA.pdf', 'RES0049/sub/report.pdf', 'RES0049_MOCA.txt', 'RES0049_MOCA.pdf.backup'].map(key => ({ Key: folder + key, Size: 100 }));
     files.push({ Key: folder + 'RES0049_MOCA.pdf', Size: 0 });

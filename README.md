@@ -87,7 +87,7 @@ The confirmed bucket is `reset-clinical-data`; `CLINICAL_DATA_BUCKET` can overri
 
 | Report | S3 key or pattern |
 | --- | --- |
-| Biochem 1B | `Biochemistry_1B/{res_id}.pdf` |
+| Biochem 1B | Participant PDF in `Biochemistry_1B/`, including `{res_id}.pdf` and filenames with underscore or hyphen separators |
 | Biochem 2A | Participant PDF in `Biochemistry_2A/`, with underscore or hyphen filename separators |
 | CTCA 2B | Any nonempty PDF under `CTCA/{res_id}/Report/` |
 | DEXA 1B | `DEXA/*/{res_id}/*.pdf` |
@@ -130,6 +130,6 @@ For Lambda, set the PostgreSQL variables under Configuration → Environment var
 
 For AWS RDS in Lambda, the PostgreSQL adapter automatically loads `/var/runtime/ca-cert.pem` with certificate verification enabled. `PGSSLROOTCERT` overrides this path. `completeness-s3-policy.json` documents the scoped read policy; applying IAM permissions requires explicit approval.
 
-MoCA and Biochem 2A availability uses their report-specific folder plus an exact participant ID followed by a separator or extension. Label case, suffix order, and Unicode MoCA labels do not affect matching. Only nonempty PDFs directly inside the configured folder count; neighboring IDs and nested unrelated files are excluded. MoCA 1A checks both known leading-space variants.
+MoCA and Biochem 1B/2A availability uses their report-specific folder plus an exact participant ID followed by a separator or extension. Label case, suffix order, and Unicode MoCA labels do not affect matching. Only nonempty PDFs directly inside the configured folder count; neighboring IDs and nested unrelated files are excluded. MoCA 1A checks both known leading-space variants.
 
 Echo and Vascular fall back to `public.echo_test` and `public.vascular_test` when a PDF is absent or cannot be checked. The fallback matches `res_id` and normalized visit `1C`. A database match is labelled as such in the page. “Missing” requires both sources to confirm absence; errors remain unknown unless the other source confirms presence.

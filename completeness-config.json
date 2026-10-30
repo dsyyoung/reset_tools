@@ -2,7 +2,7 @@
   "bucket": "reset-clinical-data",
   "sources": {
     "1b.biochem": {
-      "key": "Biochemistry_1B/{res_id}.pdf"
+      "participantFolder": "Biochemistry_1B/"
     },
     "1b.liver": {
       "key": "Liver Fibroscan/1B/{res_id}.pdf"
