@@ -8,7 +8,7 @@ test('IDs are normalized; query objects and path characters are rejected', () =>
 });
 test('unconfigured sources remain unknown without querying storage', async () => {
   const result = await checkCompleteness({ send() { throw Error('must not call'); } }, {}, 'RES1');
-  assert.deepEqual(result.counts, { total: 15, found: 0, missing: 0, unknown: 15 });
+  assert.deepEqual(result.counts, { total: 17, found: 0, missing: 0, unknown: 17 });
   assert.equal(result.visits.length, 5);
 });
 test('scoped file presence is found and no file metadata is exposed', async () => {
@@ -17,7 +17,7 @@ test('scoped file presence is found and no file metadata is exposed', async () =
     return { Contents: [{ Key: 'RES1/year1/visit1a/golden_form/report.pdf', Size: 100 }] };
   } }, config, 'RES1');
   assert.equal(result.counts.found, 1);
-  assert.equal(result.counts.unknown, 14);
+  assert.equal(result.counts.unknown, 16);
   assert.equal(JSON.stringify(result).includes('report.pdf'), false);
 });
 test('empty sources, directory markers, empty files and wrong extensions are missing', async () => {
@@ -29,7 +29,7 @@ test('empty sources, directory markers, empty files and wrong extensions are mis
 test('access denied remains unknown, never missing', async () => {
   const result = await checkCompleteness({ async send() { throw Error('AccessDenied secret'); } }, config, 'RES1');
   assert.equal(result.counts.missing, 0);
-  assert.equal(result.counts.unknown, 15);
+  assert.equal(result.counts.unknown, 17);
   assert.equal(JSON.stringify(result).includes('secret'), false);
 });
 test('pagination finds a report after directory markers', async () => {
@@ -43,12 +43,12 @@ test('pagination finds a report after directory markers', async () => {
 });
 test('incomplete pagination remains unknown', async () => {
   const result = await checkCompleteness({ async send() { return { IsTruncated: true }; } }, config, 'RES1');
-  assert.equal(result.counts.unknown, 15);
+  assert.equal(result.counts.unknown, 17);
 });
 test('prefixes must include participant ID and directory boundary', async () => {
   for (const prefix of ['all-participants/', '{res_id}']) {
     const result = await checkCompleteness({ async send() { assert.fail('unsafe prefix'); } }, { bucket: 'example', sources: { '1a.golden_form': { prefix } } }, 'RES1');
-    assert.equal(result.counts.unknown, 15);
+    assert.equal(result.counts.unknown, 17);
   }
 });
 test('flat report key uses metadata only and the exact participant filename', async () => {
@@ -68,8 +68,8 @@ test('exact-key absence differs from denied access and service errors', async ()
 
 const actualConfig = require('./completeness-config.json');
 const { patternMatcher, VISITS } = require('./completeness-service');
-test('schedule has 15 reports and excludes ECG and Year 3', () => {
-  assert.equal(VISITS.flatMap(visit => visit[2]).length, 15);
+test('schedule has 17 reports and collections and excludes ECG and Year 3', () => {
+  assert.equal(VISITS.flatMap(visit => visit[2]).length, 17);
   assert.equal(VISITS.flatMap(visit => visit[2]).includes('ecg'), false);
   assert.equal(VISITS.some(visit => visit[0] === 3), false);
 });
@@ -107,7 +107,7 @@ test('PostgreSQL checks parameterize IDs and normalize visit labels without read
     assert.ok(query.text.includes('regexp_replace'));
     return { rows: [{ found: query.values[1] === '1A' }] };
   } });
-  assert.equal(queries.length, 6);
+  assert.equal(queries.length, 8);
   const reports = result.visits.flatMap(visit => visit.reports);
   assert.equal(reports.find(report => report.id === '1a.selfq').status, 'found');
   assert.equal(reports.find(report => report.id === '2a.selfq').status, 'missing');
@@ -118,14 +118,14 @@ test('PostgreSQL errors and missing connections remain unknown', async () => {
   const config = { sources: { '1a.selfq': actualConfig.sources['1a.selfq'] } };
   for (const pool of [null, { async query() { throw Error('connection denied'); } }]) {
     const result = await checkCompleteness({}, config, 'RES1', pool);
-    assert.equal(result.counts.unknown, 15);
+    assert.equal(result.counts.unknown, 17);
   }
 });
 test('PostgreSQL rejects unscoped or invalid table mappings before querying', async () => {
   for (const change of [{ table: 'selfq; DROP TABLE selfq' }, { visitColumn: null }]) {
     const config = { sources: { '1a.selfq': { ...actualConfig.sources['1a.selfq'], ...change } } };
     const result = await checkCompleteness({}, config, 'RES1', { query() { assert.fail('Unsafe query'); } });
-    assert.equal(result.counts.unknown, 15);
+    assert.equal(result.counts.unknown, 17);
   }
 });
 test('PostgreSQL pool is optional, uses the requested database, and does not reuse HTTP PORT', async () => {
@@ -236,4 +236,36 @@ test('MongoDB connection retries after a failure and reuses a successful connect
   assert.equal(await context.connectMongo(), database);
   assert.equal(await context.connectMongo(), database);
   assert.equal(attempts, 2);
+});
+
+test('biobank availability uses the participant and visit_code independently for 1B and 2A', async () => {
+  const sources = Object.fromEntries(['1b.biobank', '2a.biobank'].map(id => [id, actualConfig.sources[id]]));
+  const queries = [];
+  const result = await checkCompleteness({}, { sources }, 'RES0001', { async query(query) {
+    queries.push(query);
+    assert.ok(query.text.includes('"public"."biobank_tube_observations"'));
+    assert.ok(query.text.includes('"res_id" = $1'));
+    assert.ok(query.text.includes('trim("visit_code")'));
+    assert.ok(!query.text.includes('collection_date'));
+    assert.ok(!query.text.includes('RES0001'));
+    assert.equal(query.values[0], 'RES0001');
+    return { rows: [{ found: query.values[1] === '1B' }] };
+  } });
+  assert.deepEqual(queries.map(q => q.values[1]), ['1B', '2A']);
+  const reports = result.visits.flatMap(v => v.reports).filter(r => r.id.endsWith('.biobank'));
+  assert.deepEqual(reports.map(r => [r.id, r.name, r.status]), [
+    ['1b.biobank', 'Biobank collection', 'found'],
+    ['2a.biobank', 'Biobank collection', 'missing'],
+  ]);
+  assert.deepEqual(result.counts, { total: 17, found: 1, missing: 1, unknown: 15 });
+});
+
+test('biobank connection failures remain unknown rather than missing', async () => {
+  const sources = { '1b.biobank': actualConfig.sources['1b.biobank'], '2a.biobank': actualConfig.sources['2a.biobank'] };
+  for (const pool of [null, { async query() { throw Error('connection unavailable'); } }]) {
+    const result = await checkCompleteness({}, { sources }, 'RES0001', pool);
+    const reports = result.visits.flatMap(v => v.reports).filter(r => r.id.endsWith('.biobank'));
+    assert.ok(reports.every(r => r.status === 'unknown'));
+    assert.equal(result.counts.missing, 0);
+  }
 });

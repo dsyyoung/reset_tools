@@ -106,8 +106,8 @@
   el('missing-only').addEventListener('change', renderVisits);
   el('sample-button').addEventListener('click', () => {
     const definitions = [
-      [1, '1A', ['Golden Form', 'SelfQ', 'MoCA']], [1, '1B', ['Biochem', 'Liver', 'DEXA', 'PE']],
-      [1, '1C', ['Echo', 'Vascular']], [2, '2A', ['Medical History', 'SelfQ', 'MoCA', 'Biochem', 'PE']],
+      [1, '1A', ['Golden Form', 'SelfQ', 'MoCA']], [1, '1B', ['Biochem', 'Liver', 'DEXA', 'PE', 'Biobank collection']],
+      [1, '1C', ['Echo', 'Vascular']], [2, '2A', ['Medical History', 'SelfQ', 'MoCA', 'Biochem', 'PE', 'Biobank collection']],
       [2, '2B', ['CTCA']],
     ];
     let index = 0;

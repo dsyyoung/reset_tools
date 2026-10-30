@@ -77,7 +77,7 @@ This application is built using a modern decoupled architecture:
 5. The frontend handles success and failure states, rendering them with clean typography, clipboard interactions, and transitions.
 ## Mobile report completeness
 
-Open `completeness.html` (also linked from the Data Viewer). The page lists 15 reports across five visits, grouped by study year. It provides expandable cards, a missing-only filter, a last-checked time, and an explicitly labelled sample preview. The preview never calls the API.
+Open `completeness.html` (also linked from the Data Viewer). The page lists 17 reports and collections across five visits, grouped by study year. It provides expandable cards, a missing-only filter, a last-checked time, and an explicitly labelled sample preview. The preview never calls the API.
 
 `GET /api/completeness?res_id=RES5216` returns availability only, without report contents or S3 object paths. It uses S3 and PostgreSQL independently of the MongoDB connection middleware. The existing server still requires `MONGO_URI` at startup. Authentication is deferred, as requested.
 
@@ -99,7 +99,7 @@ The confirmed bucket is `reset-clinical-data`; `CLINICAL_DATA_BUCKET` can overri
 
 A `key` uses exact metadata lookup. A `prefix` must contain `{res_id}` and end in `/`. A `pattern` supports `*` within one path segment, with all other characters treated literally. DEXA scans the `DEXA/` prefix to find the participant under any date folder. Finding one nonempty PDF counts as availability; this does not assert that every DEXA component is present. Year 3 and ECG are excluded for now.
 
-### PostgreSQL questionnaires
+### PostgreSQL questionnaires and biobank collection
 
 Mappings were taken from `report_extraction/Lambda/mongo_psql_sync/lambda_function.py` and its schema metadata. The database is `reset_clinical_test`, schema `public`, with `res_id` and `visit` columns:
 
@@ -110,13 +110,15 @@ Mappings were taken from `report_extraction/Lambda/mongo_psql_sync/lambda_functi
 
 Queries return only a boolean using parameterized participant and visit values. Visit labels such as `1A`, `Visit 1A`, and `Visit1A` are normalized. Presence means a database row exists, not that every answer is populated. Missing rows may reflect sync coverage or delay, not a missing source questionnaire.
 
-Configure `PGHOST`, `PGPORT` (default 5432), `PGDATABASE` (default `reset_clinical_test`), `PGUSER`, and `PGPASSWORD` in the backend environment. Host aliases `PG_HOST`/`RDSHOST` and credential aliases `USERNAME`/`PASSWORD` match the extraction code. Do not use `PORT` for PostgreSQL; it controls the HTTP server here. TLS certificate verification is enabled; set `PGSSLROOTCERT` to a readable CA file if needed. Use a database role with read access to these tables. Connections and queries have time limits, and sessions are read-only. No host is configured in this checkout, so PostgreSQL reports currently remain unknown. No credentials are stored in source files.
+Configure `PGHOST`, `PGPORT` (default 5432), `PGDATABASE` (default `reset_clinical_test`), `PGUSER`, and `PGPASSWORD` in the backend environment. Host aliases `PG_HOST`/`RDSHOST` and credential aliases `USERNAME`/`PASSWORD` match the extraction code. Do not use `PORT` for PostgreSQL; it controls the HTTP server here. TLS certificate verification is enabled; set `PGSSLROOTCERT` to a readable CA file if needed. Use a database role with read access to these tables. Connections and queries have time limits, and sessions are read-only. Without a configured host, PostgreSQL checks remain unknown. No credentials are stored in source files.
+
+Biobank collection uses `public.biobank_tube_observations`, matching `res_id` and normalized `visit_code` for visits 1B and 2A. “Found” means at least one matching tube observation exists; it does not require a collection date or prove that every sample type was collected. Duplicate observations do not affect availability. The table also contains visit 3A, which remains outside the page’s current Year 1–2 scope.
 
 Supported mapping keys:
 - `1a.golden_form`, `1a.selfq`, `1a.moca`
-- `1b.biochem`, `1b.liver`, `1b.dexa`, `1b.pe`
+- `1b.biochem`, `1b.liver`, `1b.dexa`, `1b.pe`, `1b.biobank`
 - `1c.echo`, `1c.vascular`
-- `2a.medical_history`, `2a.selfq`, `2a.moca`, `2a.biochem`, `2a.pe`
+- `2a.medical_history`, `2a.selfq`, `2a.moca`, `2a.biochem`, `2a.pe`, `2a.biobank`
 - `2b.ctca`
 
 The backend AWS role needs `s3:GetObject` for exact-key metadata checks and `s3:ListBucket` for prefix scans and to distinguish nonexistent keys from access-denied responses. A 403 remains unknown, not missing. It does not download reports. A nonempty matching file means “Found”; a fully checked prefix without a matching file means “Missing.” Missing mappings, access failures, and incomplete scans remain “Unable to check.” Each report scan is capped at 20 pages of 1,000 objects. This checks availability, not report content completeness, scheduling, exemptions, or participant registration.

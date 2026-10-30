@@ -104,6 +104,24 @@
       "filters": {},
       "visitColumn": "visit",
       "visit": "2A"
+    },
+    "1b.biobank": {
+      "type": "postgres",
+      "schema": "public",
+      "table": "biobank_tube_observations",
+      "idColumn": "res_id",
+      "filters": {},
+      "visitColumn": "visit_code",
+      "visit": "1B"
+    },
+    "2a.biobank": {
+      "type": "postgres",
+      "schema": "public",
+      "table": "biobank_tube_observations",
+      "idColumn": "res_id",
+      "filters": {},
+      "visitColumn": "visit_code",
+      "visit": "2A"
     }
   },
   "postgres": {

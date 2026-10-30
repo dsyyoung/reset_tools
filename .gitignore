@@ -3,3 +3,4 @@ node_modules/
 public/node_modules/
 .DS_Store
 mongodb-ca.pem
+rds-ca.pem
