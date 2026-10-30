@@ -5,6 +5,7 @@ const VISITS = [
   [1, '1c', ['echo', 'vascular']],
   [2, '2a', ['medical_history', 'selfq', 'moca', 'biochem', 'liver', 'pe', 'biobank']],
   [2, '2b', ['ctca']],
+  [3, '3a', ['medical_history', 'biochem', 'selfq', 'biobank']],
 ];
 const LABELS = { biobank: 'Biobank collection', golden_form: 'Golden Form', medical_history: 'Medical History', selfq: 'SelfQ', moca: 'MoCA', biochem: 'Biochem', liver: 'Liver', dexa: 'DEXA', pe: 'PE', echo: 'Echo', vascular: 'Vascular', ctca: 'CTCA' };
 function normalizeId(value) {

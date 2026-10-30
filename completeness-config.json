@@ -125,6 +125,36 @@
     },
     "2a.liver": {
       "key": "Liver Fibroscan/2A/{res_id}.pdf"
+    },
+    "3a.medical_history": {
+      "type": "postgres",
+      "schema": "public",
+      "table": "medical_history",
+      "idColumn": "res_id",
+      "filters": {},
+      "visitColumn": "visit",
+      "visit": "3A"
+    },
+    "3a.selfq": {
+      "type": "postgres",
+      "schema": "public",
+      "table": "selfq",
+      "idColumn": "res_id",
+      "filters": {},
+      "visitColumn": "visit",
+      "visit": "3A"
+    },
+    "3a.biobank": {
+      "type": "postgres",
+      "schema": "public",
+      "table": "biobank_tube_observations",
+      "idColumn": "res_id",
+      "filters": {},
+      "visitColumn": "visit_code",
+      "visit": "3A"
+    },
+    "3a.biochem": {
+      "participantFolder": "Biochemistry_3A/"
     }
   },
   "postgres": {

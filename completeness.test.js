@@ -8,8 +8,8 @@ test('IDs are normalized; query objects and path characters are rejected', () =>
 });
 test('unconfigured sources remain unknown without querying storage', async () => {
   const result = await checkCompleteness({ send() { throw Error('must not call'); } }, {}, 'RES1');
-  assert.deepEqual(result.counts, { total: 18, found: 0, missing: 0, unknown: 18 });
-  assert.equal(result.visits.length, 5);
+  assert.deepEqual(result.counts, { total: 22, found: 0, missing: 0, unknown: 22 });
+  assert.equal(result.visits.length, 6);
 });
 test('scoped file presence is found and no file metadata is exposed', async () => {
   const result = await checkCompleteness({ async send(command) {
@@ -17,7 +17,7 @@ test('scoped file presence is found and no file metadata is exposed', async () =
     return { Contents: [{ Key: 'RES1/year1/visit1a/golden_form/report.pdf', Size: 100 }] };
   } }, config, 'RES1');
   assert.equal(result.counts.found, 1);
-  assert.equal(result.counts.unknown, 17);
+  assert.equal(result.counts.unknown, 21);
   assert.equal(JSON.stringify(result).includes('report.pdf'), false);
 });
 test('empty sources, directory markers, empty files and wrong extensions are missing', async () => {
@@ -29,7 +29,7 @@ test('empty sources, directory markers, empty files and wrong extensions are mis
 test('access denied remains unknown, never missing', async () => {
   const result = await checkCompleteness({ async send() { throw Error('AccessDenied secret'); } }, config, 'RES1');
   assert.equal(result.counts.missing, 0);
-  assert.equal(result.counts.unknown, 18);
+  assert.equal(result.counts.unknown, 22);
   assert.equal(JSON.stringify(result).includes('secret'), false);
 });
 test('pagination finds a report after directory markers', async () => {
@@ -43,12 +43,12 @@ test('pagination finds a report after directory markers', async () => {
 });
 test('incomplete pagination remains unknown', async () => {
   const result = await checkCompleteness({ async send() { return { IsTruncated: true }; } }, config, 'RES1');
-  assert.equal(result.counts.unknown, 18);
+  assert.equal(result.counts.unknown, 22);
 });
 test('prefixes must include participant ID and directory boundary', async () => {
   for (const prefix of ['all-participants/', '{res_id}']) {
     const result = await checkCompleteness({ async send() { assert.fail('unsafe prefix'); } }, { bucket: 'example', sources: { '1a.golden_form': { prefix } } }, 'RES1');
-    assert.equal(result.counts.unknown, 18);
+    assert.equal(result.counts.unknown, 22);
   }
 });
 test('flat report key uses metadata only and the exact participant filename', async () => {
@@ -68,10 +68,11 @@ test('exact-key absence differs from denied access and service errors', async ()
 
 const actualConfig = require('./completeness-config.json');
 const { patternMatcher, VISITS } = require('./completeness-service');
-test('schedule has 18 reports and collections and excludes ECG and Year 3', () => {
-  assert.equal(VISITS.flatMap(visit => visit[2]).length, 18);
+test('schedule has 22 reports and collections across three years and excludes ECG', () => {
+  assert.equal(VISITS.flatMap(visit => visit[2]).length, 22);
   assert.equal(VISITS.flatMap(visit => visit[2]).includes('ecg'), false);
-  assert.equal(VISITS.some(visit => visit[0] === 3), false);
+  assert.equal(VISITS.some(visit => visit[0] === 3), true);
+  assert.deepEqual(VISITS.filter(visit => visit[0] === 3), [[3, '3a', ['medical_history', 'biochem', 'selfq', 'biobank']]]);
 });
 test('DEXA matches dated participant folders without matching neighboring IDs or nested unrelated files', () => {
   const matcher = patternMatcher(actualConfig.sources['1b.dexa'].pattern, 'RES0721');
@@ -109,25 +110,25 @@ test('PostgreSQL checks parameterize IDs and normalize visit labels without read
     assert.ok(query.text.includes('regexp_replace'));
     return { rows: [{ found: query.values[1] === '1A' }] };
   } });
-  assert.equal(queries.length, 8);
+  assert.equal(queries.length, 11);
   const reports = result.visits.flatMap(visit => visit.reports);
   assert.equal(reports.find(report => report.id === '1a.selfq').status, 'found');
   assert.equal(reports.find(report => report.id === '2a.selfq').status, 'missing');
-  assert.equal(reports.some(report => report.id.startsWith('3a.')), false);
+  assert.equal(reports.some(report => report.id.startsWith('3a.')), true);
   assert.ok(queries.some(query => query.text.includes('"public"."pe_test"') && query.values[1] === '1B'));
 });
 test('PostgreSQL errors and missing connections remain unknown', async () => {
   const config = { sources: { '1a.selfq': actualConfig.sources['1a.selfq'] } };
   for (const pool of [null, { async query() { throw Error('connection denied'); } }]) {
     const result = await checkCompleteness({}, config, 'RES1', pool);
-    assert.equal(result.counts.unknown, 18);
+    assert.equal(result.counts.unknown, 22);
   }
 });
 test('PostgreSQL rejects unscoped or invalid table mappings before querying', async () => {
   for (const change of [{ table: 'selfq; DROP TABLE selfq' }, { visitColumn: null }]) {
     const config = { sources: { '1a.selfq': { ...actualConfig.sources['1a.selfq'], ...change } } };
     const result = await checkCompleteness({}, config, 'RES1', { query() { assert.fail('Unsafe query'); } });
-    assert.equal(result.counts.unknown, 18);
+    assert.equal(result.counts.unknown, 22);
   }
 });
 test('PostgreSQL pool is optional, uses the requested database, and does not reuse HTTP PORT', async () => {
@@ -196,7 +197,7 @@ test('previous hyphen Biochem, spaced MoCA and reordered MoCA paths remain suppo
   ]) assert.equal((await checkFilename(report, participant, [{ Key: key, Size: 100 }])).report.status, 'found');
 });
 test('participant matching rejects neighboring IDs, nested files, wrong extensions and empty PDFs', async () => {
-  for (const report of ['1a.moca', '2a.moca', '1b.biochem', '2a.biochem']) {
+  for (const report of ['1a.moca', '2a.moca', '1b.biochem', '2a.biochem', '3a.biochem']) {
     const folder = actualConfig.sources[report].participantFolder;
     const files = ['RES00490_MOCA.pdf', 'RES0049A_MOCA.pdf', 'RES0049/sub/report.pdf', 'RES0049_MOCA.txt', 'RES0049_MOCA.pdf.backup'].map(key => ({ Key: folder + key, Size: 100 }));
     files.push({ Key: folder + 'RES0049_MOCA.pdf', Size: 0 });
@@ -268,8 +269,8 @@ test('MongoDB connection retries after a failure and reuses a successful connect
   assert.equal(attempts, 2);
 });
 
-test('biobank availability uses the participant and visit_code independently for 1B and 2A', async () => {
-  const sources = Object.fromEntries(['1b.biobank', '2a.biobank'].map(id => [id, actualConfig.sources[id]]));
+test('biobank availability uses the participant and visit_code independently for 1B, 2A and 3A', async () => {
+  const sources = Object.fromEntries(['1b.biobank', '2a.biobank', '3a.biobank'].map(id => [id, actualConfig.sources[id]]));
   const queries = [];
   const result = await checkCompleteness({}, { sources }, 'RES0001', { async query(query) {
     queries.push(query);
@@ -281,17 +282,18 @@ test('biobank availability uses the participant and visit_code independently for
     assert.equal(query.values[0], 'RES0001');
     return { rows: [{ found: query.values[1] === '1B' }] };
   } });
-  assert.deepEqual(queries.map(q => q.values[1]), ['1B', '2A']);
+  assert.deepEqual(queries.map(q => q.values[1]), ['1B', '2A', '3A']);
   const reports = result.visits.flatMap(v => v.reports).filter(r => r.id.endsWith('.biobank'));
   assert.deepEqual(reports.map(r => [r.id, r.name, r.status]), [
     ['1b.biobank', 'Biobank collection', 'found'],
     ['2a.biobank', 'Biobank collection', 'missing'],
+    ['3a.biobank', 'Biobank collection', 'missing'],
   ]);
-  assert.deepEqual(result.counts, { total: 18, found: 1, missing: 1, unknown: 16 });
+  assert.deepEqual(result.counts, { total: 22, found: 1, missing: 2, unknown: 19 });
 });
 
 test('biobank connection failures remain unknown rather than missing', async () => {
-  const sources = { '1b.biobank': actualConfig.sources['1b.biobank'], '2a.biobank': actualConfig.sources['2a.biobank'] };
+  const sources = Object.fromEntries(['1b.biobank', '2a.biobank', '3a.biobank'].map(id => [id, actualConfig.sources[id]]));
   for (const pool of [null, { async query() { throw Error('connection unavailable'); } }]) {
     const result = await checkCompleteness({}, { sources }, 'RES0001', pool);
     const reports = result.visits.flatMap(v => v.reports).filter(r => r.id.endsWith('.biobank'));
@@ -319,5 +321,47 @@ test('liver checks isolate each visit folder and distinguish missing files from 
         assert.equal(report.status, report.id.startsWith(foundVisit.toLowerCase()) ? 'found' : absentStatus === 404 ? 'missing' : 'unknown');
       }
     }
+  }
+});
+
+test('Visit 3A checks only its own questionnaire, biobank and biochemistry sources', async () => {
+  const sources = Object.fromEntries(Object.entries(actualConfig.sources).filter(([id]) => id.startsWith('3a.')));
+  const queries = [];
+  const result = await checkCompleteness({ async send(command) {
+    assert.equal(command.input.Prefix, 'Biochemistry_3A/RES0009');
+    assert.equal(command.input.Bucket, actualConfig.bucket);
+    return { Contents: [{ Key: 'Biochemistry_3A/RES0009_V3A_report.pdf', Size: 100 }] };
+  } }, { bucket: actualConfig.bucket, sources }, 'RES0009', { async query(query) {
+    queries.push(query);
+    assert.deepEqual(query.values, ['RES0009', '3A']);
+    assert.ok(query.text.includes('"res_id" = $1'));
+    return { rows: [{ found: !query.text.includes('"selfq"') }] };
+  } });
+  const visit = result.visits.find(v => v.id === '3a');
+  assert.equal(visit.year, 3);
+  assert.equal(visit.name, 'Visit 3A');
+  assert.deepEqual(visit.reports.map(r => [r.id, r.status]), [
+    ['3a.medical_history', 'found'], ['3a.biochem', 'found'],
+    ['3a.selfq', 'missing'], ['3a.biobank', 'found'],
+  ]);
+  assert.equal(queries.length, 3);
+  assert.ok(queries.some(q => q.text.includes('"medical_history"') && q.text.includes('trim("visit")')));
+  assert.ok(queries.some(q => q.text.includes('"selfq"') && q.text.includes('trim("visit")')));
+  assert.ok(queries.some(q => q.text.includes('"biobank_tube_observations"') && q.text.includes('trim("visit_code")')));
+  assert.deepEqual(result.counts, { total: 22, found: 3, missing: 1, unknown: 18 });
+});
+
+test('Visit 3A does not inherit Year 2 files and keeps unavailable sources unknown', async () => {
+  const sources = Object.fromEntries(Object.entries(actualConfig.sources).filter(([id]) => id.startsWith('3a.')));
+  for (const unavailable of [false, true]) {
+    const result = await checkCompleteness({ async send() {
+      if (unavailable) throw { $metadata: { httpStatusCode: 403 } };
+      return { Contents: [{ Key: 'Biochemistry_2A/RES0009.pdf', Size: 100 }] };
+    } }, { bucket: actualConfig.bucket, sources }, 'RES0009', { async query(query) {
+      if (unavailable) throw Error('unavailable');
+      return { rows: [{ found: query.values[1] === '2A' }] };
+    } });
+    const visit = result.visits.find(v => v.id === '3a');
+    assert.ok(visit.reports.every(r => r.status === (unavailable ? 'unknown' : 'missing')));
   }
 });

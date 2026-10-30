@@ -109,6 +109,7 @@
       [1, '1A', ['Golden Form', 'SelfQ', 'MoCA']], [1, '1B', ['Biochem', 'Liver', 'DEXA', 'PE', 'Biobank collection']],
       [1, '1C', ['Echo', 'Vascular']], [2, '2A', ['Medical History', 'SelfQ', 'MoCA', 'Biochem', 'Liver', 'PE', 'Biobank collection']],
       [2, '2B', ['CTCA']],
+      [3, '3A', ['Medical History', 'Biochem', 'SelfQ', 'Biobank collection']],
     ];
     let index = 0;
     const visits = definitions.map(([year, id, names]) => ({ year, id, name: `Visit ${id}`, reports: names.map(name => {

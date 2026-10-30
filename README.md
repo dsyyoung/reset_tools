@@ -77,7 +77,7 @@ This application is built using a modern decoupled architecture:
 5. The frontend handles success and failure states, rendering them with clean typography, clipboard interactions, and transitions.
 ## Mobile report completeness
 
-Open `completeness.html` (also linked from the Data Viewer). The page lists 18 reports and collections across five visits, grouped by study year. It provides expandable cards, a missing-only filter, a last-checked time, and an explicitly labelled sample preview. The preview never calls the API.
+Open `completeness.html` (also linked from the Data Viewer). The page lists 22 reports and collections across six visits, grouped by study year. It provides expandable cards, a missing-only filter, a last-checked time, and an explicitly labelled sample preview. The preview never calls the API.
 
 `GET /api/completeness?res_id=RES5216` returns availability only, without report contents or S3 object paths. It uses S3 and PostgreSQL independently of the MongoDB connection middleware. The existing server still requires `MONGO_URI` at startup. Authentication is deferred, as requested.
 
@@ -89,6 +89,7 @@ The confirmed bucket is `reset-clinical-data`; `CLINICAL_DATA_BUCKET` can overri
 | --- | --- |
 | Biochem 1B | Participant PDF in `Biochemistry_1B/`, including `{res_id}.pdf` and filenames with underscore or hyphen separators |
 | Biochem 2A | Participant PDF in `Biochemistry_2A/`, with underscore or hyphen filename separators |
+| Biochem 3A | Participant PDF in `Biochemistry_3A/`, including plain and suffixed participant filenames |
 | CTCA 2B | Any nonempty PDF under `CTCA/{res_id}/Report/` |
 | DEXA 1B | `DEXA/*/{res_id}/*.pdf` |
 | Echo 1C | `ECHO/{res_id}_E.pdf` |
@@ -98,22 +99,22 @@ The confirmed bucket is `reset-clinical-data`; `CLINICAL_DATA_BUCKET` can overri
 | MoCA 2A | Participant PDF in `MoCA_2A/V2A MoCA/`, regardless of suffix spelling/order |
 | Vascular 1C | Participant PDF in `Vascular scans/` (including `{res_id}.pdf` and `{res_id}_V.pdf`) |
 
-A `key` uses exact metadata lookup. A `prefix` must contain `{res_id}` and end in `/`. A `pattern` supports `*` within one path segment, with all other characters treated literally. DEXA scans the `DEXA/` prefix to find the participant under any date folder. Finding one nonempty PDF counts as availability; this does not assert that every DEXA component is present. Year 3 and ECG are excluded for now.
+A `key` uses exact metadata lookup. A `prefix` must contain `{res_id}` and end in `/`. A `pattern` supports `*` within one path segment, with all other characters treated literally. DEXA scans the `DEXA/` prefix to find the participant under any date folder. Finding one nonempty PDF counts as availability; this does not assert that every DEXA component is present. Year 3 includes visit 3A: Medical History, Biochem, SelfQ, and Biobank collection. ECG remains excluded.
 
 ### PostgreSQL questionnaires and biobank collection
 
 Mappings were taken from `report_extraction/Lambda/mongo_psql_sync/lambda_function.py` and its schema metadata. The database is `reset_clinical_test`, schema `public`, with `res_id` and `visit` columns:
 
 - Golden Form: `golden_form`, visit 1A.
-- SelfQ: `selfq`, visits 1A, 2A.
+- SelfQ: `selfq`, visits 1A, 2A, 3A.
 - PE: `pe_test`, visits 1B, 2A.
-- Medical History: `medical_history`, visit 2A.
+- Medical History: `medical_history`, visits 2A, 3A.
 
 Queries return only a boolean using parameterized participant and visit values. Visit labels such as `1A`, `Visit 1A`, and `Visit1A` are normalized. Presence means a database row exists, not that every answer is populated. Missing rows may reflect sync coverage or delay, not a missing source questionnaire.
 
 Configure `PGHOST`, `PGPORT` (default 5432), `PGDATABASE` (default `reset_clinical_test`), `PGUSER`, and `PGPASSWORD` in the backend environment. Host aliases `PG_HOST`/`RDSHOST` and credential aliases `USERNAME`/`PASSWORD` match the extraction code. Do not use `PORT` for PostgreSQL; it controls the HTTP server here. TLS certificate verification is enabled; set `PGSSLROOTCERT` to a readable CA file if needed. Use a database role with read access to these tables. Connections and queries have time limits, and sessions are read-only. Without a configured host, PostgreSQL checks remain unknown. No credentials are stored in source files.
 
-Biobank collection uses `public.biobank_tube_observations`, matching `res_id` and normalized `visit_code` for visits 1B and 2A. “Found” means at least one matching tube observation exists; it does not require a collection date or prove that every sample type was collected. Duplicate observations do not affect availability. The table also contains visit 3A, which remains outside the page’s current Year 1–2 scope.
+Biobank collection uses `public.biobank_tube_observations`, matching `res_id` and normalized `visit_code` for visits 1B, 2A, and 3A. “Found” means at least one matching tube observation exists; it does not require a collection date or prove that every sample type was collected. Duplicate observations do not affect availability.
 
 Supported mapping keys:
 - `1a.golden_form`, `1a.selfq`, `1a.moca`
@@ -121,6 +122,7 @@ Supported mapping keys:
 - `1c.echo`, `1c.vascular`
 - `2a.medical_history`, `2a.selfq`, `2a.moca`, `2a.biochem`, `2a.liver`, `2a.pe`, `2a.biobank`
 - `2b.ctca`
+- `3a.medical_history`, `3a.biochem`, `3a.selfq`, `3a.biobank`
 
 The backend AWS role needs `s3:GetObject` for exact-key metadata checks and `s3:ListBucket` for prefix scans and to distinguish nonexistent keys from access-denied responses. A 403 remains unknown, not missing. It does not download reports. A nonempty matching file means “Found”; a fully checked prefix without a matching file means “Missing.” Missing mappings, access failures, and incomplete scans remain “Unable to check.” Each report scan is capped at 20 pages of 1,000 objects. This checks availability, not report content completeness, scheduling, exemptions, or participant registration.
 
@@ -130,6 +132,6 @@ For Lambda, set the PostgreSQL variables under Configuration → Environment var
 
 For AWS RDS in Lambda, the PostgreSQL adapter automatically loads `/var/runtime/ca-cert.pem` with certificate verification enabled. `PGSSLROOTCERT` overrides this path. `completeness-s3-policy.json` documents the scoped read policy; applying IAM permissions requires explicit approval.
 
-MoCA and Biochem 1B/2A availability uses their report-specific folder plus an exact participant ID followed by a separator or extension. Label case, suffix order, and Unicode MoCA labels do not affect matching. Only nonempty PDFs directly inside the configured folder count; neighboring IDs and nested unrelated files are excluded. MoCA 1A checks both known leading-space variants.
+MoCA and Biochem 1B/2A/3A availability uses their report-specific folder plus an exact participant ID followed by a separator or extension. Label case, suffix order, and Unicode MoCA labels do not affect matching. Only nonempty PDFs directly inside the configured folder count; neighboring IDs and nested unrelated files are excluded. MoCA 1A checks both known leading-space variants.
 
 Echo and Vascular fall back to `public.echo_test` and `public.vascular_test` when a PDF is absent or cannot be checked. The fallback matches `res_id` and normalized visit `1C`. A database match is labelled as such in the page. “Missing” requires both sources to confirm absence; errors remain unknown unless the other source confirms presence.

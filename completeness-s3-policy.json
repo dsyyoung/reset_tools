@@ -16,6 +16,7 @@
       "Resource": [
         "arn:aws:s3:::reset-clinical-data/Biochemistry_1B/*",
         "arn:aws:s3:::reset-clinical-data/Biochemistry_2A/*",
+        "arn:aws:s3:::reset-clinical-data/Biochemistry_3A/*",
         "arn:aws:s3:::reset-clinical-data/CTCA/*",
         "arn:aws:s3:::reset-clinical-data/DEXA/*",
         "arn:aws:s3:::reset-clinical-data/ECHO/*",
