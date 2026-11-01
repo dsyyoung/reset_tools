@@ -10,6 +10,7 @@ const { S3Client, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 const { normalizeId, checkCompleteness, getOnboarding } = require('./completeness-service');
 const completenessConfig = require('./completeness-config.json');
 const { createQuestionnairePool } = require('./completeness-postgres');
+const { getBiobankDetails } = require('./biobank-service');
 const questionnairePool = createQuestionnairePool();
 
 const app = express();
@@ -91,6 +92,18 @@ app.get('/api/completeness', async (req, res) => {
     res.json({ ...result, onboarding });
   } catch {
     res.status(503).json({ error: 'Reports could not be checked. Please try again.' });
+  }
+});
+
+// Biobank details use PostgreSQL independently of MongoDB availability.
+app.get('/api/biobank', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const resId = normalizeId(req.query.res_id);
+  if (!resId) return res.status(400).json({ error: 'Enter a RESET ID such as RES5216.' });
+  try {
+    res.json(await getBiobankDetails(questionnairePool, resId));
+  } catch {
+    res.status(503).json({ error: 'Biobank collection details could not be loaded. Please try again.' });
   }
 });
 

@@ -137,3 +137,9 @@ For AWS RDS in Lambda, the PostgreSQL adapter automatically loads `/var/runtime/
 MoCA and Biochem 1B/2A/3A availability uses their report-specific folder plus an exact participant ID followed by a separator or extension. Label case, suffix order, and Unicode MoCA labels do not affect matching. Only nonempty PDFs directly inside the configured folder count; neighboring IDs and nested unrelated files are excluded. MoCA 1A checks both known leading-space variants.
 
 Echo and Vascular fall back to `public.echo_test` and `public.vascular_test` when a PDF is absent or cannot be checked. The fallback matches `res_id` and normalized visit `1C`. A database match is labelled as such in the page. “Missing” requires both sources to confirm absence; errors remain unknown unless the other source confirms presence.
+
+### Biobank collection details
+
+In `index.html`, choose **Biobank Collection** and enter a RESET ID. The viewer groups all recorded tube observations by visit and shows collection date, sample type, box ID, position, location, and the repeated-position flag. Null fields display “Not recorded”; repeated observations remain separate.
+
+`GET /api/biobank?res_id=RES1051` reads `public.biobank_tube_observations` with a parameterized, exact participant ID. It runs before MongoDB middleware, uses no-store responses, and distinguishes an empty result from an unavailable database. Dates are returned as database calendar dates without timezone conversion. Results above 5,000 observations return an error rather than a partial collection.

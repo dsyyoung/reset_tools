@@ -4,7 +4,8 @@ const resIdInput = document.getElementById('res-id');
 const fieldSelect = document.getElementById('target-field');
 const loadButton = document.getElementById('load-button');
 
-const allowedFields = ['drug_info', 'medical_history'];
+const allowedFields = ['drug_info', 'medical_history', 'biobank_collection'];
+let latestRequest = 0;
 
 // Uses the ENV object loaded from config.js
 function getApiUrl() {
@@ -15,11 +16,13 @@ function getApiUrl() {
 }
 
 async function fetchData(resId, field) {
+  const request = ++latestRequest;
   const queryString = `?res_id=${encodeURIComponent(resId)}&field=${encodeURIComponent(field)}`;
 
   try {
     const apiUrl = getApiUrl();
-    const response = await fetch(`${apiUrl}/api/data${queryString}`);
+    const endpoint = field === 'biobank_collection' ? '/api/biobank' : '/api/data';
+    const response = await fetch(`${apiUrl}${endpoint}${queryString}`, { cache: 'no-store' });
     
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
@@ -28,13 +31,15 @@ async function fetchData(resId, field) {
     }
 
     const payload = await response.json();
+    if (request !== latestRequest) return;
     renderData(payload);
   } catch (error) {
-    statusEl.textContent = 'Unable to load data.';
+    if (request !== latestRequest) return;
+    statusEl.textContent = error.message || 'Unable to load data.';
     statusEl.classList.add('error');
     statusEl.classList.remove('hidden');
     resultsEl.classList.add('hidden');
-    resultsEl.innerHTML = `<pre>${error.message}</pre>`;
+    resultsEl.textContent = '';
     console.error(error);
   }
 }
@@ -45,6 +50,11 @@ function renderData(payload) {
   statusEl.classList.remove('error');
   statusEl.classList.add('hidden');
   resultsEl.classList.remove('hidden');
+
+  if (meta?.field === 'biobank_collection') {
+    renderBiobank(data, meta);
+    return;
+  }
 
   if (!Array.isArray(data) || data.length === 0) {
     resultsEl.innerHTML = '<p>No documents were returned from the database.</p>';
@@ -194,7 +204,61 @@ function renderData(payload) {
   resultsEl.appendChild(correctionBanner);
 }
 
+function renderBiobank(data, meta) {
+  resultsEl.replaceChildren();
+  const add = (tag, text, parent) => {
+    const node = document.createElement(tag);
+    node.textContent = text;
+    parent.appendChild(node);
+    return node;
+  };
+  add('h2', `Biobank collection · ${meta.res_id}`, resultsEl);
+  if (!Array.isArray(data) || !data.length) {
+    add('p', 'No biobank collection records found for this participant.', resultsEl);
+    return;
+  }
+  add('p', `${data.length} tube observations. Each row is a recorded observation; repeated submissions are retained.`, resultsEl);
+  const columns = [
+    ['collection_date', 'Collection date'], ['sample_type', 'Sample type'],
+    ['box_id', 'Box ID'], ['box_position', 'Position'],
+    ['sample_location', 'Location'], ['repeated_position_across_submissions', 'Repeated position across submissions'],
+  ];
+  for (const visit of [...new Set(data.map(row => row.visit_code))]) {
+    const rows = data.filter(row => row.visit_code === visit);
+    const section = document.createElement('section');
+    section.className = 'biobank-visit';
+    resultsEl.appendChild(section);
+    add('h3', `Visit ${visit} · ${rows.length} observations`, section);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'biobank-table-wrap';
+    wrapper.tabIndex = 0;
+    wrapper.setAttribute('role', 'region');
+    wrapper.setAttribute('aria-label', `Visit ${visit} biobank observations`);
+    section.appendChild(wrapper);
+    const table = document.createElement('table');
+    table.className = 'data-table biobank-table';
+    wrapper.appendChild(table);
+    const head = document.createElement('thead');
+    table.appendChild(head);
+    const header = document.createElement('tr');
+    head.appendChild(header);
+    columns.forEach(([, label]) => add('th', label, header).setAttribute('scope', 'col'));
+    const body = document.createElement('tbody');
+    table.appendChild(body);
+    rows.forEach(record => {
+      const row = document.createElement('tr');
+      body.appendChild(row);
+      columns.forEach(([key]) => {
+        const value = record[key];
+        add('td', value == null || value === '' ? 'Not recorded' : typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value), row);
+      });
+    });
+  }
+}
+
 loadButton.addEventListener('click', () => {
+  // Invalidate earlier requests even if this input is rejected below.
+  latestRequest++;
   const resId = resIdInput.value.trim().toUpperCase();
   const field = fieldSelect.value;
 

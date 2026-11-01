@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'server.js'
+      - 'biobank-service.js'
       - 'completeness-service.js'
       - 'completeness-postgres.js'
       - 'completeness-config.json'
@@ -16,6 +17,7 @@ on:
       - main
     paths:
       - 'server.js'
+      - 'biobank-service.js'
       - 'completeness-service.js'
       - 'completeness-postgres.js'
       - 'completeness-config.json'
@@ -51,7 +53,7 @@ jobs:
       - name: Create Deployment Zip
         if: github.event_name == 'push'
         run: |
-          zip -r deploy.zip server.js completeness-service.js completeness-postgres.js completeness-config.json package.json node_modules mongodb-ca.pem
+          zip -r deploy.zip server.js biobank-service.js completeness-service.js completeness-postgres.js completeness-config.json package.json node_modules mongodb-ca.pem
 
       - name: Configure AWS Credentials
         if: github.event_name == 'push'
